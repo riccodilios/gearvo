@@ -19,6 +19,17 @@ export async function getCustomers() {
   });
 }
 
+/** For client components (e.g. dropdowns): id and fullName only, serializable. */
+export async function getCustomersForSelect(): Promise<{ id: string; fullName: string }[]> {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+  return prisma.customer.findMany({
+    where: { tenantId },
+    orderBy: { fullName: 'asc' },
+    select: { id: true, fullName: true },
+  });
+}
+
 export async function getCustomer(id: string) {
   const tenantId = await getTenantId();
   if (!tenantId) return null;

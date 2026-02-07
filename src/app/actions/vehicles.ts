@@ -15,6 +15,20 @@ export async function getVehicles(customerId?: string) {
   });
 }
 
+/** For client components: plain fields for dropdowns, serializable. */
+export async function getVehiclesForSelect(): Promise<
+  { id: string; customerId: string; year: number; make: string; model: string; licensePlate: string | null }[]
+> {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+  const rows = await prisma.vehicle.findMany({
+    where: { tenantId },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, customerId: true, year: true, make: true, model: true, licensePlate: true },
+  });
+  return rows;
+}
+
 export async function createVehicle(data: VehicleInput) {
   const tenantId = await requireTenantId();
   const parsed = vehicleSchema.parse(data);

@@ -18,6 +18,26 @@ export async function getCarParts(category?: string) {
   });
 }
 
+/** For client components (e.g. repair order form): plain fields, serializable. */
+export async function getCarPartsForSelect(): Promise<
+  { id: string; name: string; stockQuantity: number; costPrice: number; retailPrice: number }[]
+> {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+  const rows = await prisma.carPart.findMany({
+    where: { tenantId },
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true, stockQuantity: true, costPrice: true, retailPrice: true },
+  });
+  return rows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    stockQuantity: p.stockQuantity,
+    costPrice: Number(p.costPrice),
+    retailPrice: Number(p.retailPrice),
+  }));
+}
+
 export async function getLowStockParts() {
   const tenantId = await getTenantId();
   if (!tenantId) return [];

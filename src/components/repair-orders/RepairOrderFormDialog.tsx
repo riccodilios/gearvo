@@ -21,11 +21,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createRepairOrder } from '@/app/actions/repair-orders';
-import { getCustomers } from '@/app/actions/customers';
-import { getVehicles } from '@/app/actions/vehicles';
-import { getCarParts } from '@/app/actions/inventory';
-import type { Customer, Vehicle, CarPart } from '@prisma/client';
+import { getCustomersForSelect } from '@/app/actions/customers';
+import { getVehiclesForSelect } from '@/app/actions/vehicles';
+import { getCarPartsForSelect } from '@/app/actions/inventory';
 import { Plus, Trash2 } from 'lucide-react';
+
+type CustomerSelect = { id: string; fullName: string };
+type VehicleSelect = { id: string; customerId: string; year: number; make: string; model: string; licensePlate: string | null };
+type PartSelect = { id: string; name: string; stockQuantity: number; costPrice: number; retailPrice: number };
 
 interface RepairOrderFormDialogProps {
   trigger: React.ReactNode;
@@ -35,9 +38,9 @@ export function RepairOrderFormDialog({ trigger }: RepairOrderFormDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [customers, setCustomers] = useState<(Customer & { vehicles?: Vehicle[] })[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [parts, setParts] = useState<(CarPart & { supplier: { name: string } | null })[]>([]);
+  const [customers, setCustomers] = useState<CustomerSelect[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleSelect[]>([]);
+  const [parts, setParts] = useState<PartSelect[]>([]);
   const [customerId, setCustomerId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
   const [partsUsed, setPartsUsed] = useState<
@@ -48,13 +51,13 @@ export function RepairOrderFormDialog({ trigger }: RepairOrderFormDialogProps) {
   useEffect(() => {
     if (open) {
       Promise.all([
-        getCustomers(),
-        getVehicles(),
-        getCarParts(),
+        getCustomersForSelect(),
+        getVehiclesForSelect(),
+        getCarPartsForSelect(),
       ]).then(([c, v, p]) => {
-        setCustomers(c as (Customer & { vehicles?: Vehicle[] })[]);
+        setCustomers(c);
         setVehicles(v);
-        setParts(p as (CarPart & { supplier: { name: string } | null })[]);
+        setParts(p);
       });
     }
   }, [open]);
@@ -76,8 +79,8 @@ export function RepairOrderFormDialog({ trigger }: RepairOrderFormDialogProps) {
     const part = parts.find((p) => p.id === value);
     const updates: Record<string, string | number> = { [field]: value };
     if (field === 'carPartId' && part) {
-      updates.costPrice = Number(part.costPrice);
-      updates.retailPrice = Number(part.retailPrice);
+      updates.costPrice = part.costPrice;
+      updates.retailPrice = part.retailPrice;
     }
     setPartsUsed(
       partsUsed.map((p, i) =>
