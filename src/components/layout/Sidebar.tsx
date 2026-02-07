@@ -114,6 +114,7 @@ export function Sidebar() {
           <SignOutButton />
           <p className="text-xs font-medium text-zinc-500">Gearvo SaaS</p>
           <p className="text-xs text-zinc-600">Mechanic Shop OS</p>
+          <p className="text-xs text-zinc-500">Made by Rakan AlHakim</p>
         </div>
       </aside>
 
