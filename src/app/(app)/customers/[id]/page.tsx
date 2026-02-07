@@ -7,8 +7,9 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog';
+import { AddVehicleDialog } from '@/components/customers/AddVehicleDialog';
 import { Button } from '@/components/ui/button';
-import { Pencil, ArrowLeft } from 'lucide-react';
+import { Pencil, ArrowLeft, Plus } from 'lucide-react';
 
 export default async function CustomerDetailPage({
   params,
@@ -131,12 +132,21 @@ export default async function CustomerDetailPage({
         </TabsList>
         <TabsContent value="vehicles" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle>Vehicles</CardTitle>
+              <AddVehicleDialog
+                customerId={customer.id}
+                trigger={
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add vehicle
+                  </Button>
+                }
+              />
             </CardHeader>
             <CardContent>
               {customer.vehicles.length === 0 ? (
-                <p className="text-sm text-zinc-500">No vehicles</p>
+                <p className="text-sm text-zinc-500">No vehicles. Add one to get started.</p>
               ) : (
                 <div className="space-y-2">
                   {customer.vehicles.map((v) => (
@@ -148,11 +158,10 @@ export default async function CustomerDetailPage({
                         <p className="font-medium">
                           {v.year} {v.make} {v.model}
                         </p>
-                        {v.licensePlate && (
-                          <p className="text-sm text-zinc-500">
-                            {v.licensePlate}
-                          </p>
-                        )}
+                        <div className="flex flex-wrap gap-x-3 gap-y-0 text-sm text-zinc-500">
+                          {v.color && <span>{v.color}</span>}
+                          {v.licensePlate && <span>{v.licensePlate}</span>}
+                        </div>
                       </div>
                       <div className="text-right text-sm text-zinc-500">
                         {v.mileage ? `${v.mileage} mi` : '-'}

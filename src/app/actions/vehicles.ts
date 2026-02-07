@@ -77,6 +77,8 @@ export async function updateVehicle(id: string, data: VehicleInput) {
 
 export async function deleteVehicle(id: string) {
   const tenantId = await requireTenantId();
+  const vehicle = await prisma.vehicle.findFirst({ where: { id, tenantId }, select: { customerId: true } });
   await prisma.vehicle.delete({ where: { id, tenantId } });
   revalidatePath('/customers');
+  if (vehicle) revalidatePath(`/customers/${vehicle.customerId}`);
 }
