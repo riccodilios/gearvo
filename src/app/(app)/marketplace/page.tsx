@@ -1,0 +1,89 @@
+import { getSuppliersWithParts, getPurchaseOrders } from '@/app/actions/marketplace';
+import { PageHeader } from '@/components/PageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { Card, CardContent } from '@/components/ui/card';
+import { ShoppingCart, Package } from 'lucide-react';
+import { MarketplaceSupplierOrder } from '@/components/marketplace/MarketplaceSupplierOrder';
+import { PurchaseOrdersList } from '@/components/marketplace/PurchaseOrdersList';
+
+function toNum(v: unknown): number {
+  return typeof v === 'number' ? v : Number(String(v));
+}
+
+export default async function MarketplacePage() {
+  const [suppliersWithParts, orders] = await Promise.all([
+    getSuppliersWithParts(),
+    getPurchaseOrders(),
+  ]);
+
+  const suppliersWithPartsToOrder = suppliersWithParts.filter((s) => s.carParts.length > 0);
+
+  const serializedSuppliers = suppliersWithPartsToOrder.map((s) => ({
+    id: s.id,
+    name: s.name,
+    carParts: s.carParts.map((p) => ({
+      id: p.id,
+      name: p.name,
+      partNumber: p.partNumber,
+      costPrice: toNum(p.costPrice),
+      retailPrice: toNum(p.retailPrice),
+      stockQuantity: p.stockQuantity,
+      minStockLevel: p.minStockLevel,
+    })),
+  }));
+
+  const serializedOrders = orders.map((o) => ({
+    id: o.id,
+    orderNumber: o.orderNumber,
+    status: o.status,
+    createdAt: o.createdAt.toISOString(),
+    supplier: { name: o.supplier.name },
+    lines: o.lines.map((l) => ({
+      id: l.id,
+      quantity: l.quantity,
+      unitCost: toNum(l.unitCost),
+      carPart: { id: l.carPart.id, name: l.carPart.name },
+    })),
+  }));
+
+  return (
+    <div className="space-y-8">
+      <PageHeader
+        title="Order parts"
+        description="Order parts from your suppliers and track purchase orders"
+      />
+
+      <section>
+        <h2 className="mb-4 text-lg font-semibold text-zinc-100">Order from suppliers</h2>
+        {serializedSuppliers.length === 0 ? (
+          <EmptyState
+            icon={<Package className="h-6 w-6" />}
+            title="No parts linked to suppliers"
+            description="Add suppliers and assign parts to them in Inventory to order here."
+          />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {serializedSuppliers.map((supplier) => (
+              <MarketplaceSupplierOrder key={supplier.id} supplier={supplier} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-lg font-semibold text-zinc-100">Your purchase orders</h2>
+        {serializedOrders.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <ShoppingCart className="h-10 w-10 text-zinc-600" />
+              <p className="mt-2 text-sm text-zinc-500">No purchase orders yet</p>
+              <p className="text-xs text-zinc-600">Place an order above to see it here.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <PurchaseOrdersList orders={serializedOrders} />
+        )}
+      </section>
+    </div>
+  );
+}

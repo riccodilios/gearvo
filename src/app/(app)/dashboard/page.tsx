@@ -1,0 +1,213 @@
+import {
+  getDashboardStats,
+  getRevenueTrend,
+  getRecentRepairOrders,
+} from '@/app/actions/dashboard';
+import { StatCard } from '@/components/StatCard';
+import { PageHeader } from '@/components/PageHeader';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCurrency } from '@/lib/utils';
+import Link from 'next/link';
+import {
+  DollarSign,
+  TrendingUp,
+  Users,
+  Package,
+  AlertTriangle,
+  Calendar,
+  Wrench,
+} from 'lucide-react';
+import { RevenueChart } from '@/components/dashboard/RevenueChart';
+import { LowStockAlerts } from '@/components/dashboard/LowStockAlerts';
+
+export default async function DashboardPage() {
+  const [stats, revenueTrend, recentOrders] = await Promise.all([
+    getDashboardStats(),
+    getRevenueTrend(6),
+    getRecentRepairOrders(5),
+  ]);
+
+  return (
+    <div className="space-y-8">
+      <PageHeader
+        title="Dashboard"
+        description="Overview of your mechanic shop performance"
+      />
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Today's Revenue"
+          value={formatCurrency(stats.todayRevenue)}
+          icon={DollarSign}
+        />
+        <StatCard
+          title="Monthly Revenue"
+          value={formatCurrency(stats.thisMonthRevenue)}
+          trend={{
+            value: stats.monthOverMonth,
+            label: 'vs last month',
+            positive: stats.monthOverMonth >= 0,
+          }}
+          icon={TrendingUp}
+        />
+        <StatCard
+          title="Total Profit"
+          value={formatCurrency(stats.totalProfit)}
+          description="From completed repairs"
+          icon={DollarSign}
+        />
+        <StatCard
+          title="Outstanding Balance"
+          value={formatCurrency(stats.outstandingBalance)}
+          description={stats.overdueCount > 0 ? `${stats.overdueCount} overdue` : undefined}
+          icon={AlertTriangle}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Active Repairs</CardTitle>
+            <Wrench className="h-4 w-4 text-zinc-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeRepairs}</div>
+            <Link
+              href="/repair-orders"
+              className="text-xs text-amber-500 hover:underline"
+            >
+              View all
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+            <Users className="h-4 w-4 text-zinc-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+            <Link
+              href="/customers"
+              className="text-xs text-amber-500 hover:underline"
+            >
+              View all
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+            <Package className="h-4 w-4 text-zinc-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.lowStockCount}</div>
+            <Link
+              href="/inventory"
+              className="text-xs text-amber-500 hover:underline"
+            >
+              Manage
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              Upcoming Installments
+            </CardTitle>
+            <Calendar className="h-4 w-4 text-zinc-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {stats.upcomingInstallments}
+            </div>
+            <p className="text-xs text-zinc-500">Next 30 days</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              Next Month Forecast
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-zinc-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(stats.nextMonthForecast)}
+            </div>
+            <p className="text-xs text-zinc-500">Based on current trend</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Revenue Trend</CardTitle>
+            <p className="text-sm text-zinc-400">Last 6 months</p>
+          </CardHeader>
+          <CardContent>
+            <RevenueChart data={revenueTrend} />
+          </CardContent>
+        </Card>
+        <div className="space-y-4">
+          <LowStockAlerts />
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Repair Orders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentOrders.length === 0 ? (
+                  <p className="text-sm text-zinc-500">No recent repair orders</p>
+                ) : (
+                  recentOrders.map((order) => (
+                    <Link
+                      key={order.id}
+                      href="/repair-orders"
+                      className="flex items-center justify-between rounded-lg border border-zinc-800 p-3 transition-colors hover:bg-zinc-800/50"
+                    >
+                      <div>
+                        <p className="font-medium">{order.orderNumber}</p>
+                        <p className="text-sm text-zinc-500">
+                          {order.customer.fullName} • {order.vehicle.make}{' '}
+                          {order.vehicle.model}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">
+                          {formatCurrency(Number(order.totalPrice))}
+                        </p>
+                        <StatusBadge status={order.status} />
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const variants: Record<
+    string,
+    'default' | 'secondary' | 'success' | 'warning'
+  > = {
+    PENDING: 'secondary',
+    IN_PROGRESS: 'default',
+    WAITING_PARTS: 'warning',
+    COMPLETED: 'success',
+    DELIVERED: 'success',
+    CANCELLED: 'secondary',
+  };
+  return (
+    <Badge variant={variants[status] ?? 'secondary'} className="mt-1">
+      {status.replace('_', ' ')}
+    </Badge>
+  );
+}
