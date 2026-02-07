@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Package, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SupplierFormDialog } from '@/components/suppliers/SupplierFormDialog';
+import { SupplierCard } from '@/components/suppliers/SupplierCard';
 import {
   Table,
   TableBody,
