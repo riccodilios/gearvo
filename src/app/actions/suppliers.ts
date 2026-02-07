@@ -15,6 +15,18 @@ export async function getSuppliers() {
   });
 }
 
+/** For client components (e.g. dropdowns): returns only id and name, serializable. */
+export async function getSuppliersForSelect(): Promise<{ id: string; name: string }[]> {
+  const tenantId = await getTenantId();
+  if (!tenantId) return [];
+  const rows = await prisma.supplier.findMany({
+    where: { tenantId },
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true },
+  });
+  return rows;
+}
+
 export async function createSupplier(data: SupplierInput) {
   const tenantId = await requireTenantId();
   const parsed = supplierSchema.parse(data);

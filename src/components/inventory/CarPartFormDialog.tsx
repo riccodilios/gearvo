@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createCarPart, updateCarPart } from '@/app/actions/inventory';
-import { getSuppliers } from '@/app/actions/suppliers';
+import { getSuppliersForSelect } from '@/app/actions/suppliers';
 
 /** Serializable part fields for edit form (no Decimal/Date). */
 export type CarPartFormInitial = {
@@ -51,7 +51,7 @@ export function CarPartFormDialog({ trigger, part }: CarPartFormDialogProps) {
 
   useEffect(() => {
     if (open) {
-      getSuppliers().then((s) => setSuppliers(s));
+      getSuppliersForSelect().then((s) => setSuppliers(s));
       setSupplierId(part?.supplierId ?? null);
     }
   }, [open, part?.supplierId]);
