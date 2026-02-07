@@ -15,6 +15,7 @@ Gearvo is wired for **Clerk** so you can add proper sign-in, sign-up, and accoun
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxx
    CLERK_SECRET_KEY=sk_test_xxxx
    ```
+   **Netlify:** Set both in Site → Environment variables. If only one is set, the app can show “Application error” on load; add both and redeploy.
 4. **Restart** the dev server or redeploy.
 
 After that:

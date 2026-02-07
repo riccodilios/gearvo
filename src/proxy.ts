@@ -9,13 +9,17 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+  try {
+    if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !process.env.CLERK_SECRET_KEY) {
+      return NextResponse.next();
+    }
+    if (!isPublicRoute(req)) {
+      await auth().protect();
+    }
+    return NextResponse.next();
+  } catch {
     return NextResponse.next();
   }
-  if (!isPublicRoute(req)) {
-    await auth().protect();
-  }
-  return NextResponse.next();
 });
 
 export const config = {

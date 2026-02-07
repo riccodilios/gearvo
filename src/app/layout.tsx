@@ -32,9 +32,12 @@ export default function RootLayout({
     </body>
   );
 
+  const hasClerk =
+    !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+    !!process.env.CLERK_SECRET_KEY;
   return (
     <html lang="en" className="dark">
-      {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+      {hasClerk ? (
         <ClerkProvider
           appearance={{
             variables: { colorPrimary: '#f59e0b', colorBackground: '#18181b', colorText: '#fafafa' },
