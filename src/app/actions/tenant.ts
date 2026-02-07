@@ -43,9 +43,17 @@ export async function createShopAndSignIn(formData: FormData): Promise<{ error?:
   }
 }
 
+const DB_CHECK_TIMEOUT_MS = 10000;
+
 export async function isDatabaseConnected(): Promise<boolean> {
+  if (!process.env.DATABASE_URL?.trim()) return false;
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), DB_CHECK_TIMEOUT_MS)
+      ),
+    ]);
     return true;
   } catch {
     return false;

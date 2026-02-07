@@ -3,6 +3,9 @@ import { Wrench } from 'lucide-react';
 import { CreateShopForm } from './CreateShopForm';
 import { isDatabaseConnected } from '@/app/actions/tenant';
 
+// Run on every request so we use runtime DATABASE_URL (e.g. on Netlify), not build-time
+export const dynamic = 'force-dynamic';
+
 export default async function SetupPage() {
   const dbConnected = await isDatabaseConnected();
 
@@ -32,23 +35,19 @@ export default async function SetupPage() {
               Connect your database
             </h1>
             <p className="mt-2 text-sm text-zinc-400">
-              To create your shop and save data, you need a PostgreSQL database.
+              To create your shop and save data, the app needs a PostgreSQL connection.
             </p>
-            <ol className="mt-6 list-inside list-decimal space-y-2 text-sm text-zinc-300">
-              <li>Install PostgreSQL or use a hosted service (e.g. Vercel Postgres, Supabase, Neon).</li>
-              <li>Create a database and copy the connection URL.</li>
-              <li>In your project root, create a <code className="rounded bg-zinc-800 px-1">.env</code> file with:
-                <pre className="mt-2 overflow-x-auto rounded bg-zinc-900 p-3 text-xs">
-                  DATABASE_URL=&quot;postgresql://user:password@host:5432/dbname&quot;
-                </pre>
-              </li>
-              <li>Run in terminal:
-                <pre className="mt-2 overflow-x-auto rounded bg-zinc-900 p-3 text-xs">
-                  npx prisma db push{'\n'}
-                  npx prisma db seed
-                </pre>
-              </li>
-              <li>Restart the app and return to this page.</li>
+            <div className="mt-4 rounded border border-zinc-700 bg-zinc-900/50 p-4">
+              <p className="text-sm font-medium text-zinc-300">Deployed on Netlify?</p>
+              <p className="mt-1 text-sm text-zinc-500">
+                In Netlify: <strong>Site configuration</strong> → <strong>Environment variables</strong> → add <code className="rounded bg-zinc-800 px-1">DATABASE_URL</code> with your PostgreSQL URL (e.g. from Neon). Use the same value as in your local .env. Then trigger a new deploy (e.g. push a commit or “Clear cache and deploy site”).
+              </p>
+            </div>
+            <p className="mt-4 text-sm text-zinc-400">Local development:</p>
+            <ol className="mt-2 list-inside list-decimal space-y-2 text-sm text-zinc-300">
+              <li>Use a hosted DB (Neon, Supabase) or local PostgreSQL.</li>
+              <li>In your project root, create a <code className="rounded bg-zinc-800 px-1">.env</code> with <code className="rounded bg-zinc-800 px-1">DATABASE_URL=&quot;postgresql://...&quot;</code></li>
+              <li>Run <code className="rounded bg-zinc-800 px-1">npx prisma db push</code> and <code className="rounded bg-zinc-800 px-1">npx prisma db seed</code>, then restart the app.</li>
             </ol>
             <div className="mt-6 flex gap-4">
               <Link
