@@ -13,7 +13,7 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
   if (!isPublicRoute(req)) {
-    await auth.protect();
+    await auth().protect();
   }
   return NextResponse.next();
 });
