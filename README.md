@@ -95,3 +95,7 @@ See `.env.example` for required and optional variables.
 ## Deployment
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for Vercel deployment instructions.
+
+---
+
+**Made by Rakan AlHakim**
