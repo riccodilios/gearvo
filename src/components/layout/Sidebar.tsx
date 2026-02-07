@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { SignedIn, UserButton } from '@clerk/nextjs';
 import {
   LayoutDashboard,
   Users,
@@ -111,6 +112,16 @@ export function Sidebar() {
         </nav>
 
         <div className="absolute bottom-4 left-4 right-4 space-y-2 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+          <SignedIn>
+            <div className="flex items-center justify-center">
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{
+                  variables: { colorPrimary: '#f59e0b' },
+                }}
+              />
+            </div>
+          </SignedIn>
           <SignOutButton />
           <p className="text-xs font-medium text-zinc-500">Gearvo SaaS</p>
           <p className="text-xs text-zinc-600">Mechanic Shop OS</p>

@@ -20,7 +20,13 @@ export default function WelcomePage() {
               Get started
             </Link>
             <Link
-              href="/dashboard"
+              href="/sign-up"
+              className="text-sm font-medium text-zinc-400 hover:text-amber-500"
+            >
+              Sign up
+            </Link>
+            <Link
+              href="/sign-in"
               className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
             >
               Sign in
@@ -47,7 +53,7 @@ export default function WelcomePage() {
               Create your shop
             </Link>
             <Link
-              href="/dashboard"
+              href="/sign-in"
               className="rounded-lg border border-zinc-700 px-6 py-3 text-base font-medium hover:bg-zinc-800"
             >
               Sign in
