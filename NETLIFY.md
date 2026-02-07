@@ -20,16 +20,17 @@ Node version is set to **20** in `netlify.toml`.
 
 ## Environment variables (in Netlify UI)
 
-In **Site settings → Environment variables**, add:
+In **Site configuration → Environment variables** (or **Site settings → Environment variables**), add:
 
-### Required
+### Required: `DATABASE_URL`
 
-| Variable | Value | Scopes |
-|----------|--------|--------|
-| `DATABASE_URL` | Your PostgreSQL connection string (e.g. Neon or Supabase URL) | All (Production, Deploy previews, Branch deploys) |
+- **Key (name):** `DATABASE_URL`
+- **Value:** Your full PostgreSQL connection string. For Neon, use the **pooled** URL (host contains `-pooler`), for example:
+  - `postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/DBNAME?sslmode=require`
+  - Include `&channel_binding=require` if your Neon dashboard shows it.
+- **Scopes:** Check **Production** (and **Deploy previews** / **Branch deploys** if you use them).
 
-Use the same `DATABASE_URL` you use locally (e.g. from Neon).  
-**Do not** commit `.env`; set it only in Netlify.
+Use the same value as in your local `.env`. Do not commit the real URL to Git.
 
 ### Optional (same as local .env)
 
