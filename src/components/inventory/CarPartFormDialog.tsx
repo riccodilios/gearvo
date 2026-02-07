@@ -51,8 +51,10 @@ export function CarPartFormDialog({ trigger, part }: CarPartFormDialogProps) {
 
   useEffect(() => {
     if (open) {
-      getSuppliersForSelect().then((s) => setSuppliers(s));
       setSupplierId(part?.supplierId ?? null);
+      getSuppliersForSelect()
+        .then((s) => setSuppliers(Array.isArray(s) ? s : []))
+        .catch(() => setSuppliers([]));
     }
   }, [open, part?.supplierId]);
 
@@ -113,14 +115,14 @@ export function CarPartFormDialog({ trigger, part }: CarPartFormDialogProps) {
             <div className="grid gap-2">
               <Label>Supplier</Label>
               <Select
-                value={supplierId ?? ''}
-                onValueChange={(v) => setSupplierId(v || null)}
+                value={supplierId ?? '__none__'}
+                onValueChange={(v) => setSupplierId(v === '__none__' ? null : v)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select supplier" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {suppliers.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.name}
