@@ -24,3 +24,12 @@ body {
 input, select, textarea {
   accent-color: #f59e0b;
 }
+
+/* Clerk sign-in/up: social button text white on dark background */
+[data-clerk-component] button [data-localization-key],
+[data-clerk-component] a [data-localization-key] {
+  color: #fafafa;
+}
+[data-clerk-component] .cl-socialButtonsBlockButton {
+  color: #fafafa;
+}

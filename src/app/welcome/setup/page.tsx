@@ -66,9 +66,9 @@ export default async function SetupPage() {
           </div>
         ) : (
           <div>
-            <h1 className="text-2xl font-bold">Create your shop</h1>
+            <h1 className="text-2xl font-bold">Set up your shop</h1>
             <p className="mt-2 text-zinc-400">
-              Each mechanic business gets its own workspace. Your data and metrics are isolated.
+              Enter your shop name and optional URL slug. Your data and metrics are isolated per workspace.
             </p>
             <CreateShopForm />
             <p className="mt-6 text-center text-sm text-zinc-500">

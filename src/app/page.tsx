@@ -14,16 +14,10 @@ export default function WelcomePage() {
           </div>
           <nav className="flex items-center gap-6">
             <Link
-              href="/welcome/setup"
-              className="text-sm font-medium text-zinc-400 hover:text-amber-500"
-            >
-              Get started
-            </Link>
-            <Link
               href="/sign-up"
               className="text-sm font-medium text-zinc-400 hover:text-amber-500"
             >
-              Sign up
+              Join Gearvo
             </Link>
             <Link
               href="/sign-in"
@@ -47,10 +41,10 @@ export default function WelcomePage() {
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link
-              href="/welcome/setup"
+              href="/sign-up"
               className="rounded-lg bg-amber-600 px-6 py-3 text-base font-medium text-white hover:bg-amber-700"
             >
-              Create your shop
+              Join Gearvo
             </Link>
             <Link
               href="/sign-in"
@@ -119,13 +113,13 @@ export default function WelcomePage() {
           <div className="mx-auto max-w-6xl px-4 text-center">
             <h2 className="text-2xl font-bold">Ready to run your shop?</h2>
             <p className="mt-2 text-zinc-400">
-              Create your account and get your own workspace in minutes.
+              Create your account, then set up your shop in minutes.
             </p>
             <Link
-              href="/welcome/setup"
+              href="/sign-up"
               className="mt-6 inline-block rounded-lg bg-amber-600 px-6 py-3 font-medium text-white hover:bg-amber-700"
             >
-              Get started
+              Join Gearvo
             </Link>
           </div>
         </section>

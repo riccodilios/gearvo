@@ -33,6 +33,23 @@ export const getTenantId = cache(async (): Promise<string | null> => {
   }
 });
 
+/** Get current tenant (id, name, slug) for display. Returns null when no tenant or DB unreachable. */
+export const getTenant = cache(async (): Promise<{ id: string; name: string; slug: string } | null> => {
+  const id = await getTenantId();
+  if (!id) return null;
+  try {
+    const tenant = await Promise.race([
+      prisma.tenant.findUnique({ where: { id }, select: { id: true, name: true, slug: true } }),
+      new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), DB_TIMEOUT_MS)
+      ),
+    ]);
+    return tenant;
+  } catch {
+    return null;
+  }
+});
+
 /** Throw with a friendly message when in demo mode (no DB). Use in create/update/delete actions. */
 export async function requireTenantId(): Promise<string> {
   const id = await getTenantId();

@@ -1,16 +1,70 @@
+import { currentUser } from '@clerk/nextjs/server';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getTeamUsers } from '@/app/actions/users';
+import { getTenant } from '@/lib/tenant';
+import { UserButton } from '@clerk/nextjs';
 
 export default async function SettingsPage() {
-  const users = await getTeamUsers();
+  const [users, tenant, user] = await Promise.all([
+    getTeamUsers(),
+    getTenant(),
+    currentUser().catch(() => null),
+  ]);
+  const displayName = user ? [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || 'Signed in' : null;
+  const email = user?.primaryEmailAddress?.emailAddress ?? null;
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Settings"
-        description="Manage your shop settings"
+        description="Manage your shop and account"
       />
+
+      {(user != null) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Account</CardTitle>
+            <p className="text-sm text-zinc-400">Your login and profile</p>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{ variables: { colorPrimary: '#f59e0b' } }}
+              />
+              <div>
+                <p className="font-medium text-zinc-200">{displayName}</p>
+                <p className="text-sm text-zinc-500">{email ?? '—'}</p>
+              </div>
+            </div>
+            <p className="text-xs text-zinc-500">Use the avatar to manage account or sign out.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Shop</CardTitle>
+          <p className="text-sm text-zinc-400">Your workspace name and URL slug</p>
+        </CardHeader>
+        <CardContent>
+          {tenant ? (
+            <dl className="space-y-2">
+              <div>
+                <dt className="text-xs font-medium text-zinc-500">Shop name</dt>
+                <dd className="mt-0.5 font-medium text-zinc-200">{tenant.name}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-zinc-500">URL slug</dt>
+                <dd className="mt-0.5 font-mono text-sm text-zinc-300">{tenant.slug}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="text-sm text-zinc-500">No shop selected. Create a shop from the welcome flow.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -50,11 +104,11 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>General</CardTitle>
-          <p className="text-sm text-zinc-400">Shop information and preferences</p>
+          <p className="text-sm text-zinc-400">Shop preferences</p>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-zinc-500">
-            Shop settings will be configurable here. Connect Stripe for payments to unlock subscription management.
+            More shop settings (address, logo, etc.) will be configurable here. Connect Stripe for payments to unlock subscription management.
           </p>
         </CardContent>
       </Card>

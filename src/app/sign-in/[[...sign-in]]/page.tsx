@@ -10,6 +10,11 @@ export default function SignInPage() {
       <SignIn
         appearance={{
           variables: { colorPrimary: '#f59e0b', colorBackground: '#18181b', colorText: '#fafafa' },
+          layout: { unsafe_disableDevelopmentModeWarnings: true },
+          elements: {
+            socialButtonsBlockButton: { color: '#fafafa' },
+            socialButtonsBlockButtonText: { color: '#fafafa' },
+          },
         }}
         afterSignInUrl="/dashboard"
         signUpUrl="/sign-up"

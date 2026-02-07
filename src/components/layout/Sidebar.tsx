@@ -56,7 +56,7 @@ function SignOutButton() {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ shopName }: { shopName?: string | null }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -80,11 +80,13 @@ export function Sidebar() {
         )}
       >
         <div className="flex h-16 items-center gap-2 border-b border-zinc-800 px-6">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-600">
+          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-600">
               <Wrench className="h-4 w-4 text-white" />
             </div>
-            <span className="text-xl font-bold text-zinc-50">Gearvo</span>
+            <span className="truncate text-xl font-bold text-zinc-50">
+              {shopName ?? 'Gearvo'}
+            </span>
           </Link>
         </div>
 

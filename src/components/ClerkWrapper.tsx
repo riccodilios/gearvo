@@ -9,6 +9,13 @@ const appearance = {
     colorBackground: '#18181b',
     colorText: '#fafafa',
   },
+  layout: {
+    unsafe_disableDevelopmentModeWarnings: true,
+  },
+  elements: {
+    socialButtonsBlockButton: { color: '#fafafa' },
+    socialButtonsBlockButtonText: { color: '#fafafa' },
+  },
 };
 
 /**
