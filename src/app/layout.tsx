@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { ClerkProvider } from '@clerk/nextjs';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { ClerkWrapper } from '@/components/ClerkWrapper';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -32,22 +32,12 @@ export default function RootLayout({
     </body>
   );
 
-  const hasClerk =
+  const useClerk =
     !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
     !!process.env.CLERK_SECRET_KEY;
   return (
     <html lang="en" className="dark">
-      {hasClerk ? (
-        <ClerkProvider
-          appearance={{
-            variables: { colorPrimary: '#f59e0b', colorBackground: '#18181b', colorText: '#fafafa' },
-          }}
-        >
-          {body}
-        </ClerkProvider>
-      ) : (
-        body
-      )}
+      <ClerkWrapper useClerk={useClerk}>{body}</ClerkWrapper>
     </html>
   );
 }
