@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { headers, cookies } from 'next/headers';
 import { prisma } from './db';
 
-const DB_TIMEOUT_MS = 1500;
+const DB_TIMEOUT_MS = 1000;
 
 /**
  * Get current tenant ID from request context.

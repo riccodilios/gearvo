@@ -35,6 +35,38 @@ async function main() {
     });
   }
 
+  let supplier2 = await prisma.supplier.findFirst({
+    where: { tenantId: tenant.id, name: 'Pro Brake & Suspension' },
+  });
+  if (!supplier2) {
+    supplier2 = await prisma.supplier.create({
+      data: {
+        tenantId: tenant.id,
+        name: 'Pro Brake & Suspension',
+        contactPerson: 'Maria Garcia',
+        phone: '+1 555-0300',
+        email: 'orders@probrake.com',
+        address: '789 Industrial Blvd',
+      },
+    });
+  }
+
+  let supplier3 = await prisma.supplier.findFirst({
+    where: { tenantId: tenant.id, name: 'Engine & Filter Direct' },
+  });
+  if (!supplier3) {
+    supplier3 = await prisma.supplier.create({
+      data: {
+        tenantId: tenant.id,
+        name: 'Engine & Filter Direct',
+        contactPerson: 'David Chen',
+        phone: '+1 555-0400',
+        email: 'wholesale@enginefilter.com',
+        address: '321 Warehouse Rd',
+      },
+    });
+  }
+
   let customer1 = await prisma.customer.findFirst({
     where: { tenantId: tenant.id, email: 'alice@example.com' },
   });
@@ -153,6 +185,40 @@ async function main() {
         category: 'Engine',
       },
     });
+  }
+
+  const extraParts = [
+    { partNumber: 'AF-001', name: 'Air Filter', cost: 12, retail: 28, qty: 25, min: 5, category: 'Engine', sup: supplier },
+    { partNumber: 'CF-001', name: 'Cabin Air Filter', cost: 15, retail: 35, qty: 18, min: 5, category: 'HVAC', sup: supplier },
+    { partNumber: 'WB-001', name: 'Wiper Blades (Pair)', cost: 18, retail: 42, qty: 30, min: 5, category: 'Exterior', sup: supplier },
+    { partNumber: 'BR-R-001', name: 'Brake Rotor (Front)', cost: 65, retail: 135, qty: 8, min: 2, category: 'Brakes', sup: supplier2 },
+    { partNumber: 'BR-R-002', name: 'Brake Rotor (Rear)', cost: 55, retail: 115, qty: 6, min: 2, category: 'Brakes', sup: supplier2 },
+    { partNumber: 'BP-R-001', name: 'Brake Pads (Rear)', cost: 38, retail: 79, qty: 15, min: 5, category: 'Brakes', sup: supplier2 },
+    { partNumber: 'STR-001', name: 'Strut Assembly', cost: 120, retail: 249, qty: 4, min: 2, category: 'Suspension', sup: supplier2 },
+    { partNumber: 'OF-002', name: 'Oil Filter (Heavy Duty)', cost: 14, retail: 32, qty: 20, min: 5, category: 'Engine', sup: supplier3 },
+    { partNumber: 'PCV-001', name: 'PCV Valve', cost: 9, retail: 22, qty: 12, min: 3, category: 'Engine', sup: supplier3 },
+    { partNumber: 'BAT-001', name: '12V Battery (55Ah)', cost: 85, retail: 169, qty: 5, min: 2, category: 'Electrical', sup: supplier3 },
+  ];
+
+  for (const p of extraParts) {
+    const exists = await prisma.carPart.findFirst({
+      where: { tenantId: tenant.id, partNumber: p.partNumber },
+    });
+    if (!exists) {
+      await prisma.carPart.create({
+        data: {
+          tenantId: tenant.id,
+          supplierId: p.sup.id,
+          name: p.name,
+          partNumber: p.partNumber,
+          costPrice: p.cost,
+          retailPrice: p.retail,
+          stockQuantity: p.qty,
+          minStockLevel: p.min,
+          category: p.category,
+        },
+      });
+    }
   }
 
   const existingOrder = await prisma.repairOrder.findFirst({
