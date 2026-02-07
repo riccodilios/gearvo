@@ -166,6 +166,27 @@ export async function recordPayment(data: {
   revalidatePath('/dashboard');
 }
 
+const PAYMENT_METHODS = ['CASH', 'CARD', 'BANK_TRANSFER', 'CHECK', 'STRIPE', 'OTHER'] as const;
+
+export async function updatePaymentMethod(
+  paymentId: string,
+  method: (typeof PAYMENT_METHODS)[number]
+) {
+  const tenantId = await requireTenantId();
+  const payment = await prisma.payment.findFirst({
+    where: { id: paymentId, tenantId },
+  });
+  if (!payment) throw new Error('Payment not found');
+
+  await prisma.payment.update({
+    where: { id: paymentId, tenantId },
+    data: { method },
+  });
+
+  revalidatePath('/invoices');
+  revalidatePath(`/invoices/${payment.invoiceId}`);
+}
+
 async function updateCustomerBalances(customerId: string) {
   const invoices = await prisma.invoice.findMany({
     where: { customerId },

@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Wrench, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RepairOrderFormDialog } from '@/components/repair-orders/RepairOrderFormDialog';
+import { RepairOrderStatusSelect } from '@/components/repair-orders/RepairOrderStatusSelect';
 import { GenerateInvoiceButton } from '@/components/repair-orders/GenerateInvoiceButton';
 import {
   Table,
@@ -97,7 +98,10 @@ export default async function RepairOrdersPage({
                       {order.vehicle.model}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={order.status} />
+                      <RepairOrderStatusSelect
+                        orderId={order.id}
+                        currentStatus={order.status}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       {formatCurrency(Number(order.totalPrice))}
@@ -106,12 +110,10 @@ export default async function RepairOrdersPage({
                       {formatCurrency(Number(order.profit))}
                     </TableCell>
                     <TableCell>
-                      {(order.status === 'COMPLETED' || order.status === 'DELIVERED') && (
-                        <GenerateInvoiceButton
-                          repairOrderId={order.id}
-                          hasInvoice={!!order.invoice}
-                        />
-                      )}
+                      <GenerateInvoiceButton
+                        repairOrderId={order.id}
+                        hasInvoice={!!order.invoice}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -121,24 +123,5 @@ export default async function RepairOrdersPage({
         </Card>
       )}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const variants: Record<
-    string,
-    'default' | 'secondary' | 'success' | 'warning'
-  > = {
-    PENDING: 'secondary',
-    IN_PROGRESS: 'default',
-    WAITING_PARTS: 'warning',
-    COMPLETED: 'success',
-    DELIVERED: 'success',
-    CANCELLED: 'secondary',
-  };
-  return (
-    <Badge variant={variants[status] ?? 'secondary'}>
-      {status.replace('_', ' ')}
-    </Badge>
   );
 }

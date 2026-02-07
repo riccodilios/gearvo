@@ -131,11 +131,29 @@ export async function updateRepairOrderStatus(
   status: 'PENDING' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'COMPLETED' | 'DELIVERED' | 'CANCELLED'
 ) {
   const tenantId = await requireTenantId();
+  const order = await prisma.repairOrder.findFirst({
+    where: { id, tenantId },
+    include: { invoice: true },
+  });
+  if (!order) throw new Error('Repair order not found');
+
   await prisma.repairOrder.update({
     where: { id, tenantId },
     data: { status },
   });
+
+  // Auto-create invoice when order is completed/delivered and no invoice exists
+  if (
+    (status === 'COMPLETED' || status === 'DELIVERED') &&
+    !order.invoice
+  ) {
+    const { createInvoiceFromRepairOrder } = await import('@/app/actions/invoices');
+    await createInvoiceFromRepairOrder(id);
+  }
+
   revalidatePath('/repair-orders');
   revalidatePath(`/repair-orders/${id}`);
+  revalidatePath('/invoices');
   revalidatePath('/dashboard');
+  revalidatePath('/customers');
 }

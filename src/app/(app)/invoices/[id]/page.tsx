@@ -6,6 +6,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PaymentDialog } from '@/components/invoices/PaymentDialog';
+import { PaymentMethodSelect } from '@/components/invoices/PaymentMethodSelect';
 
 export default async function InvoiceDetailPage({
   params,
@@ -130,16 +131,20 @@ export default async function InvoiceDetailPage({
               {invoice.payments.map((payment) => (
                 <div
                   key={payment.id}
-                  className="flex justify-between rounded-lg border border-zinc-800 p-4"
+                  className="flex items-center justify-between rounded-lg border border-zinc-800 p-4"
                 >
                   <div>
                     <p className="font-medium text-emerald-500">
                       {formatCurrency(Number(payment.amount))}
                     </p>
                     <p className="text-sm text-zinc-500">
-                      {formatDate(payment.paymentDate)} • {payment.method}
+                      {formatDate(payment.paymentDate)}
                     </p>
                   </div>
+                  <PaymentMethodSelect
+                    paymentId={payment.id}
+                    currentMethod={payment.method}
+                  />
                 </div>
               ))}
             </div>
