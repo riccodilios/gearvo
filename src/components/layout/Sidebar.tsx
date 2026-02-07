@@ -119,7 +119,20 @@ export function Sidebar({ shopName }: { shopName?: string | null }) {
               <UserButton
                 afterSignOutUrl="/"
                 appearance={{
-                  variables: { colorPrimary: '#f59e0b' },
+                  variables: {
+                    colorPrimary: '#f59e0b',
+                    colorBackground: '#18181b',
+                    colorText: '#fafafa',
+                  },
+                  elements: {
+                    userButtonPopoverCard: {
+                      backgroundColor: '#18181b',
+                      color: '#fafafa',
+                    },
+                    userButtonPopoverActionButton: {
+                      color: '#f4f4f5',
+                    },
+                  },
                 }}
               />
             </div>

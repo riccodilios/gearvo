@@ -44,3 +44,32 @@ input, select, textarea {
 [data-clerk-component] input::placeholder {
   color: #a1a1aa;
 }
+
+/* Clerk UserButton popover & account modal: light text on dark */
+.cl-userButtonPopoverCard,
+.cl-modalContent,
+.cl-card {
+  background-color: #18181b !important;
+  color: #fafafa !important;
+}
+.cl-userButtonPopoverCard button,
+.cl-userButtonPopoverCard a,
+.cl-modalContent button,
+.cl-modalContent a,
+.cl-card button,
+.cl-card a {
+  color: #f4f4f5 !important;
+}
+.cl-userButtonPopoverCard span,
+.cl-userButtonPopoverCard p,
+.cl-modalContent span,
+.cl-modalContent p,
+.cl-card span,
+.cl-card p,
+.cl-badge,
+.cl-formFieldLabel {
+  color: #e4e4e7 !important;
+}
+.cl-userButtonPopoverActionButton {
+  color: #f4f4f5 !important;
+}
