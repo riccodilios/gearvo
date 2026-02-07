@@ -33,3 +33,14 @@ input, select, textarea {
 [data-clerk-component] .cl-socialButtonsBlockButton {
   color: #fafafa;
 }
+
+/* Clerk form inputs: dark background, white text */
+[data-clerk-component] input[type="text"],
+[data-clerk-component] input[type="email"],
+[data-clerk-component] input[type="password"] {
+  background-color: #27272a !important;
+  color: #fafafa !important;
+}
+[data-clerk-component] input::placeholder {
+  color: #a1a1aa;
+}

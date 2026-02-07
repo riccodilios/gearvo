@@ -12,20 +12,12 @@ export default function WelcomePage() {
             </div>
             <span className="text-xl font-bold">Gearvo</span>
           </div>
-          <nav className="flex items-center gap-6">
-            <Link
-              href="/sign-up"
-              className="text-sm font-medium text-zinc-400 hover:text-amber-500"
-            >
-              Join Gearvo
-            </Link>
-            <Link
-              href="/sign-in"
-              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
-            >
-              Sign in
-            </Link>
-          </nav>
+          <a
+            href="#learn-more"
+            className="text-sm font-medium text-zinc-400 hover:text-amber-500"
+          >
+            Learn more about Gearvo
+          </a>
         </div>
       </header>
 
@@ -55,15 +47,18 @@ export default function WelcomePage() {
           </div>
         </section>
 
-        <section className="border-t border-zinc-800 bg-zinc-900/30 py-24">
+        <section id="learn-more" className="scroll-mt-20 border-t border-zinc-800 bg-zinc-900/30 py-24">
           <div className="mx-auto max-w-6xl px-4">
             <h2 className="text-center text-2xl font-bold">
-              Everything you need to run your shop
+              What is Gearvo?
             </h2>
-            <p className="mx-auto mt-2 max-w-xl text-center text-zinc-400">
-              One platform. Your data. Your metrics.
+            <p className="mx-auto mt-3 max-w-2xl text-center text-zinc-400">
+              Gearvo is the operating system for mechanic shops. One platform for customers, repair orders, inventory, invoices, and payments—with your own secure workspace and metrics.
             </p>
-            <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <h3 className="mt-12 text-center text-lg font-semibold text-zinc-300">
+              Everything you need to run your shop
+            </h3>
+            <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 {
                   icon: Users,
@@ -109,20 +104,6 @@ export default function WelcomePage() {
           </div>
         </section>
 
-        <section className="border-t border-zinc-800 py-24">
-          <div className="mx-auto max-w-6xl px-4 text-center">
-            <h2 className="text-2xl font-bold">Ready to run your shop?</h2>
-            <p className="mt-2 text-zinc-400">
-              Create your account, then set up your shop in minutes.
-            </p>
-            <Link
-              href="/sign-up"
-              className="mt-6 inline-block rounded-lg bg-amber-600 px-6 py-3 font-medium text-white hover:bg-amber-700"
-            >
-              Join Gearvo
-            </Link>
-          </div>
-        </section>
       </main>
 
       <footer className="border-t border-zinc-800 py-8">

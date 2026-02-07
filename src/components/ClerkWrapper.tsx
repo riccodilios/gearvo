@@ -8,6 +8,8 @@ const appearance = {
     colorPrimary: '#f59e0b',
     colorBackground: '#18181b',
     colorText: '#fafafa',
+    colorInputBackground: '#27272a',
+    colorInputText: '#fafafa',
   },
   layout: {
     unsafe_disableDevelopmentModeWarnings: true,
@@ -15,6 +17,7 @@ const appearance = {
   elements: {
     socialButtonsBlockButton: { color: '#fafafa' },
     socialButtonsBlockButtonText: { color: '#fafafa' },
+    formFieldInput: { backgroundColor: '#27272a', color: '#fafafa' },
   },
 };
 

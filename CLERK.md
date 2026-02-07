@@ -25,6 +25,8 @@ After that:
 - **Sidebar** shows Clerk’s **UserButton** (avatar, account, sign out) when signed in.
 - **Tenant “Sign out”** in the sidebar still clears the current shop (tenant-id cookie); use **UserButton → Sign out** to sign out of your account.
 
+**Require first and last name on sign-up:** In the Clerk Dashboard go to **User & authentication** → **Personalization** (or **Email, phone, username**) and enable **First name** and **Last name** as required so they are not optional.
+
 ---
 
 ## 2. What’s already done
