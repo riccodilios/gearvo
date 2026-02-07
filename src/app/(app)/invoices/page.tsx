@@ -120,7 +120,7 @@ export default async function InvoicesPage({
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<
     string,
-    'default' | 'secondary' | 'success' | 'warning'
+    'default' | 'secondary' | 'success' | 'warning' | 'destructive'
   > = {
     UNPAID: 'destructive',
     PARTIAL: 'warning',
