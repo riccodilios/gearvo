@@ -5,9 +5,16 @@
 import type { PrismaClient } from '@prisma/client';
 import { FeatureModule, IntegrationStatus } from '@prisma/client';
 
+import {
+  DEMO_PRESENTATION_ACCOUNTS,
+  linkDemoClerkAccounts,
+  resolveDemoStaffUser,
+} from '@/server/demo-clerk-link';
+
 export const DEMO_COMPANY_SLUG = 'demo-auto';
 export const DEMO_OWNER_CLERK_ID = 'dev_clerk_owner';
-export const DEMO_OWNER_EMAIL = 'owner@demo.gearvo.local';
+/** Presentation login email (Clerk). Local placeholder seeds may still use *.gearvo.local. */
+export const DEMO_OWNER_EMAIL = 'demo.owner@gearvo.app';
 
 const ALL_FEATURES = Object.values(FeatureModule);
 
@@ -118,18 +125,76 @@ export async function seedDemoCompany(prisma: PrismaClient) {
   await clearDemoCompany(prisma);
   const rnd = mulberry32(20260805);
 
+  const presentationByPlaceholder = Object.fromEntries(
+    DEMO_PRESENTATION_ACCOUNTS.map((a) => [a.placeholderClerkId, a])
+  ) as Record<string, (typeof DEMO_PRESENTATION_ACCOUNTS)[number]>;
+
   const staffDefs = [
-    { clerkId: DEMO_OWNER_CLERK_ID, email: DEMO_OWNER_EMAIL, fullName: 'Ahmed Al-Rashid', isPlatformAdmin: true, role: 'COMPANY_OWNER' as const, branch: null as 'main' | 'north' | null },
-    { clerkId: 'dev_clerk_manager', email: 'manager@demo.gearvo.local', fullName: 'Sara Al-Harbi', isPlatformAdmin: false, role: 'BRANCH_MANAGER' as const, branch: 'main' as const },
-    { clerkId: 'dev_clerk_advisor', email: 'advisor@demo.gearvo.local', fullName: 'Yousef Al-Mutairi', isPlatformAdmin: false, role: 'SERVICE_ADVISOR' as const, branch: 'main' as const },
-    { clerkId: 'dev_clerk_tech', email: 'tech@demo.gearvo.local', fullName: 'Hassan Al-Ghamdi', isPlatformAdmin: false, role: 'TECHNICIAN' as const, branch: 'main' as const },
-    { clerkId: 'dev_clerk_cashier', email: 'cashier@demo.gearvo.local', fullName: 'Reem Al-Dosari', isPlatformAdmin: false, role: 'CASHIER' as const, branch: 'main' as const },
-    { clerkId: 'dev_clerk_inventory', email: 'inventory@demo.gearvo.local', fullName: 'Khalid Al-Zahrani', isPlatformAdmin: false, role: 'INVENTORY_MANAGER' as const, branch: 'main' as const },
-    { clerkId: 'dev_clerk_north_mgr', email: 'north@demo.gearvo.local', fullName: 'Noura Al-Shehri', isPlatformAdmin: false, role: 'BRANCH_MANAGER' as const, branch: 'north' as const },
+    {
+      clerkId: DEMO_OWNER_CLERK_ID,
+      email: DEMO_OWNER_EMAIL,
+      fullName: 'Ahmed Al-Rashid',
+      isPlatformAdmin: true,
+      role: 'COMPANY_OWNER' as const,
+      branch: null as 'main' | 'north' | null,
+    },
+    {
+      clerkId: 'dev_clerk_manager',
+      email: 'demo.manager@gearvo.app',
+      fullName: 'Sara Al-Harbi',
+      isPlatformAdmin: false,
+      role: 'BRANCH_MANAGER' as const,
+      branch: 'main' as const,
+    },
+    {
+      clerkId: 'dev_clerk_advisor',
+      email: 'advisor@demo.gearvo.local',
+      fullName: 'Yousef Al-Mutairi',
+      isPlatformAdmin: false,
+      role: 'SERVICE_ADVISOR' as const,
+      branch: 'main' as const,
+    },
+    {
+      clerkId: 'dev_clerk_tech',
+      email: 'tech@demo.gearvo.local',
+      fullName: 'Hassan Al-Ghamdi',
+      isPlatformAdmin: false,
+      role: 'TECHNICIAN' as const,
+      branch: 'main' as const,
+    },
+    {
+      clerkId: 'dev_clerk_cashier',
+      email: 'cashier@demo.gearvo.local',
+      fullName: 'Reem Al-Dosari',
+      isPlatformAdmin: false,
+      role: 'CASHIER' as const,
+      branch: 'main' as const,
+    },
+    {
+      clerkId: 'dev_clerk_inventory',
+      email: 'inventory@demo.gearvo.local',
+      fullName: 'Khalid Al-Zahrani',
+      isPlatformAdmin: false,
+      role: 'INVENTORY_MANAGER' as const,
+      branch: 'main' as const,
+    },
+    {
+      clerkId: 'dev_clerk_north_mgr',
+      email: 'north@demo.gearvo.local',
+      fullName: 'Noura Al-Shehri',
+      isPlatformAdmin: false,
+      role: 'BRANCH_MANAGER' as const,
+      branch: 'north' as const,
+    },
   ];
 
   const users = [];
   for (const s of staffDefs) {
+    const presentation = presentationByPlaceholder[s.clerkId];
+    if (presentation) {
+      users.push(await resolveDemoStaffUser(prisma, presentation));
+      continue;
+    }
     users.push(
       await prisma.user.upsert({
         where: { clerkId: s.clerkId },
@@ -641,6 +706,9 @@ export async function seedDemoCompany(prisma: PrismaClient) {
       },
     ],
   });
+
+  // Keep presentation Clerk accounts attached after every seed/reset
+  await linkDemoClerkAccounts(prisma);
 
   return {
     companyId: company.id,

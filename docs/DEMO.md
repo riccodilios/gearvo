@@ -25,7 +25,7 @@ This uses a Clerk sign-in ticket for demo accounts only, so email OTP is skipped
 
 Regular `/sign-in` may still prompt for OTP depending on your Clerk dashboard “email code / client trust” settings — that is instance-wide and cannot be disabled for one account only inside Clerk.
 
-Re-provision Clerk links after a full demo reset:
+Seed/reset now re-links `demo.owner@` / `demo.manager@` Clerk accounts automatically when `CLERK_SECRET_KEY` is set. If nav is empty after a reset, run:
 
 ```bash
 node scripts/provision-demo-clerk.js

@@ -1,6 +1,8 @@
 /**
  * Provision real Clerk users for the Al-Noor demo company and link them in Prisma.
  * Usage: node scripts/provision-demo-clerk.js
+ *
+ * Prefer linking via email so this still works after seed changed clerkIds.
  */
 const { PrismaClient } = require('@prisma/client');
 const { loadEnv } = require('./load-env');
@@ -16,18 +18,20 @@ const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'GearvoDemo2026!';
 
 const ACCOUNTS = [
   {
-    prismaClerkId: 'dev_clerk_owner',
+    placeholderClerkId: 'dev_clerk_owner',
     email: 'demo.owner@gearvo.app',
     firstName: 'Ahmed',
     lastName: 'Al-Rashid',
     roleLabel: 'Company Owner (platform admin)',
+    isPlatformAdmin: true,
   },
   {
-    prismaClerkId: 'dev_clerk_manager',
+    placeholderClerkId: 'dev_clerk_manager',
     email: 'demo.manager@gearvo.app',
     firstName: 'Sara',
     lastName: 'Al-Harbi',
     roleLabel: 'Branch Manager · Riyadh Main',
+    isPlatformAdmin: false,
   },
 ];
 
@@ -65,7 +69,6 @@ async function findUserByEmail(email) {
 async function ensureClerkUser(account) {
   const existing = await findUserByEmail(account.email);
   if (existing) {
-    // Reset password so demos always use the known credential
     await clerkFetch(`/users/${existing.id}`, {
       method: 'PATCH',
       body: JSON.stringify({
@@ -91,6 +94,12 @@ async function ensureClerkUser(account) {
   });
 }
 
+async function findPrismaStaff(prisma, account) {
+  const byEmail = await prisma.user.findFirst({ where: { email: account.email } });
+  if (byEmail) return byEmail;
+  return prisma.user.findUnique({ where: { clerkId: account.placeholderClerkId } });
+}
+
 async function main() {
   const prisma = new PrismaClient();
   const creds = [];
@@ -100,46 +109,72 @@ async function main() {
       const clerkUser = await ensureClerkUser(account);
       const clerkId = clerkUser.id;
 
-      const prismaUser = await prisma.user.findUnique({
-        where: { clerkId: account.prismaClerkId },
-      });
-
-      if (!prismaUser) {
-        console.warn(`No Prisma user for ${account.prismaClerkId} — seed demo first`);
+      const target = await findPrismaStaff(prisma, account);
+      if (!target) {
+        console.warn(`No Prisma staff for ${account.email} — run demo seed first`);
         continue;
       }
 
-      // If another row already has this clerkId, merge carefully
+      // Prefer the row that already owns demo-auto memberships
+      const withMembership =
+        (await prisma.user.findFirst({
+          where: {
+            memberships: { some: { company: { slug: 'demo-auto' }, isActive: true } },
+            OR: [{ email: account.email }, { clerkId: account.placeholderClerkId }],
+          },
+        })) || target;
+
       const clash = await prisma.user.findUnique({ where: { clerkId } });
-      if (clash && clash.id !== prismaUser.id) {
-        await prisma.membership.deleteMany({ where: { userId: clash.id } });
-        await prisma.user.delete({ where: { id: clash.id } });
+      if (clash && clash.id !== withMembership.id) {
+        await prisma.membership.updateMany({
+          where: { userId: clash.id },
+          data: { userId: withMembership.id },
+        });
+        await prisma.user.delete({ where: { id: clash.id } }).catch(() => undefined);
+      }
+
+      // Also merge leftover placeholder if different
+      const placeholder = await prisma.user.findUnique({
+        where: { clerkId: account.placeholderClerkId },
+      });
+      if (placeholder && placeholder.id !== withMembership.id) {
+        await prisma.membership.updateMany({
+          where: { userId: placeholder.id },
+          data: { userId: withMembership.id },
+        });
+        await prisma.user.delete({ where: { id: placeholder.id } }).catch(() => undefined);
       }
 
       await prisma.user.update({
-        where: { id: prismaUser.id },
+        where: { id: withMembership.id },
         data: {
           clerkId,
           email: account.email,
           fullName: `${account.firstName} ${account.lastName}`,
-          isPlatformAdmin: account.prismaClerkId === 'dev_clerk_owner',
+          isPlatformAdmin: account.isPlatformAdmin,
         },
       });
 
-      // Soften MFA so password UI is cleaner (OTP may still appear from instance email settings)
       try {
         await clerkFetch(`/users/${clerkId}/disable_mfa`, { method: 'POST' });
       } catch {
         /* ok */
       }
 
+      const membershipCount = await prisma.membership.count({
+        where: { userId: withMembership.id, company: { slug: 'demo-auto' }, isActive: true },
+      });
+
       creds.push({
         role: account.roleLabel,
         email: account.email,
         password: DEMO_PASSWORD,
         clerkId,
+        memberships: membershipCount,
       });
-      console.log(`Linked ${account.email} → ${clerkId} (${account.roleLabel})`);
+      console.log(
+        `Linked ${account.email} → ${clerkId} (${account.roleLabel}) · demo memberships: ${membershipCount}`
+      );
     }
 
     console.log('\n=== DEMO CREDENTIALS (production) ===');
@@ -147,8 +182,9 @@ async function main() {
       console.log(`\n${c.role}`);
       console.log(`  Email:    ${c.email}`);
       console.log(`  Password: ${c.password}`);
+      console.log(`  Memberships on demo-auto: ${c.memberships}`);
     }
-    console.log('\nSign in at /sign-in then open /dashboard');
+    console.log('\nEnter via /demo (ticket login) or /sign-in after signing out.');
     console.log('Company: Al-Noor Auto Care (demo-auto)');
   } finally {
     await prisma.$disconnect();
