@@ -51,7 +51,7 @@ function AlreadySignedIn() {
         </SignOutButton>
         {!isDemo && (
           <Button asChild variant="outline" className="w-full">
-            <Link href="/dashboard">{t.onboarding.goDashboard}</Link>
+            <Link href="/welcome">{t.onboarding.goDashboard}</Link>
           </Button>
         )}
         {isDemo && (
@@ -77,7 +77,7 @@ export function SignInClient() {
         <SignIn
           key={locale}
           appearance={appearance}
-          fallbackRedirectUrl="/dashboard"
+          fallbackRedirectUrl="/welcome"
           signUpUrl="/sign-up"
         />
       </SignedOut>

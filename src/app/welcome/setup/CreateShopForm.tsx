@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { SignedIn, SignedOut } from '@clerk/nextjs';
+import { SignedIn, SignedOut, useClerk } from '@clerk/nextjs';
 import { createShopAndSignIn } from '@/app/actions/tenant';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { useI18n } from '@/i18n/provider';
 
 export function CreateShopForm() {
   const { t, locale } = useI18n();
+  const { signOut } = useClerk();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -22,6 +23,7 @@ export function CreateShopForm() {
     setLoading(true);
     try {
       const formData = new FormData(e.currentTarget);
+      formData.set('locale', locale);
       const result = await createShopAndSignIn(formData);
       if (result?.error) {
         setError(result.error);
@@ -47,9 +49,14 @@ export function CreateShopForm() {
               ? 'يجب تسجيل الدخول أولاً قبل إنشاء ورشتك.'
               : 'Sign in first, then come back to create your shop.'}
           </p>
-          <Button asChild className="mt-4 w-full">
-            <Link href="/sign-in">{t.nav.signIn}</Link>
-          </Button>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <Button asChild className="w-full">
+              <Link href="/sign-in">{t.nav.signIn}</Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/sign-up">{locale === 'ar' ? 'إنشاء حساب' : 'Sign up'}</Link>
+            </Button>
+          </div>
         </div>
       </SignedOut>
       <SignedIn>
@@ -59,6 +66,7 @@ export function CreateShopForm() {
               {error}
             </div>
           )}
+          <input type="hidden" name="locale" value={locale} />
           <div>
             <Label htmlFor="name">{t.onboarding.shopName} *</Label>
             <Input
@@ -77,6 +85,13 @@ export function CreateShopForm() {
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? t.onboarding.creating : t.onboarding.createShop}
           </Button>
+          <button
+            type="button"
+            className="w-full text-center text-xs text-zinc-500 underline hover:text-zinc-300"
+            onClick={() => signOut({ redirectUrl: '/sign-in' })}
+          >
+            {locale === 'ar' ? 'تسجيل الخروج واستخدام حساب آخر' : 'Sign out and use a different account'}
+          </button>
         </form>
       </SignedIn>
     </>

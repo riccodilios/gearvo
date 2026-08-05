@@ -5,6 +5,7 @@ import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 import { getWorkspaceContext, getNavAccess } from '@/server/auth';
 import { listBranches } from '@/app/actions/workspace';
 import { redirect } from 'next/navigation';
+import { DEMO_COMPANY_SLUG } from '@/server/demo-constants';
 
 /** Auth/workspace-bound routes must not be statically prerendered at build time. */
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,7 @@ export default async function AppLayout({
   }
 
   const branches = await listBranches();
-  const isPresentationDemo = ctx.company.slug === 'demo-auto';
+  const isPresentationDemo = ctx.company.slug === DEMO_COMPANY_SLUG;
 
   return (
     <>

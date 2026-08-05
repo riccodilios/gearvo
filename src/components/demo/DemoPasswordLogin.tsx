@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSignIn, useAuth, SignOutButton } from '@clerk/nextjs';
-import { enterDemoWithPassword } from '@/app/actions/demo-login';
+import { enterDemoWithPassword, activateDemoWorkspace } from '@/app/actions/demo-login';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,7 +54,8 @@ export function DemoPasswordLogin({
         });
         if (attempt.status === 'complete' && attempt.createdSessionId) {
           await setActive({ session: attempt.createdSessionId });
-          router.push(res.redirectTo);
+          const activated = await activateDemoWorkspace();
+          router.push(activated.ok ? activated.redirectTo : res.redirectTo);
           router.refresh();
           return;
         }

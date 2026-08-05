@@ -9,12 +9,13 @@ import {
   BRANCH_COOKIE,
   WORKSPACE_COOKIE,
   ensurePrismaUser,
+  setWorkspaceCookies,
 } from '@/server/auth';
-import { seedCompanyFeatures } from '@/server/features';
-import { ensureCompanyIntegrations } from '@/server/integrations/registry';
 import { logActivity } from '@/server/audit';
 import { assertRateLimit } from '@/server/rate-limit';
 import { toUserError } from '@/server/errors';
+import { DEMO_COMPANY_SLUG, isDemoCompanySlug, isDemoEmail } from '@/server/demo-constants';
+import { bootstrapCompanyForOwner } from '@/server/workspace-bootstrap';
 
 function createShopErrorMessage(err: unknown): string {
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
@@ -30,7 +31,6 @@ function createShopErrorMessage(err: unknown): string {
     return 'Database is not connected. Set DATABASE_URL and run migrations.';
   }
   if (msg.toLowerCase().includes('cookie')) {
-    // Company may still have been created — membership is enough for workspace.
     return 'Shop was created but session cookies failed. Open the dashboard and refresh.';
   }
   return toUserError(err).message;
@@ -52,6 +52,9 @@ export async function createCompanyWorkspace(
   }
 
   if (!name) return { error: 'Company name is required.' };
+  if (slug === DEMO_COMPANY_SLUG) {
+    return { error: 'That shop URL is reserved. Please choose another.' };
+  }
 
   try {
     await assertRateLimit(`create-company:${slug}`, 5, 60_000);
@@ -70,16 +73,7 @@ export async function createCompanyWorkspace(
         }
         user = await ensurePrismaUser();
       } else if (env.allowDevBypass) {
-        user = await prisma.user.upsert({
-          where: { clerkId: 'dev_clerk_owner' },
-          create: {
-            clerkId: 'dev_clerk_owner',
-            email: 'owner@demo.gearvo.local',
-            fullName: 'Demo Owner',
-            isPlatformAdmin: true,
-          },
-          update: {},
-        });
+        return { error: 'Dev bypass cannot create production shops. Configure Clerk.' };
       } else {
         return { error: 'Authentication required.' };
       }
@@ -87,106 +81,63 @@ export async function createCompanyWorkspace(
 
     if (!user) return { error: 'Could not resolve user. Sign in, then try again.' };
 
-    // Already owns a shop — send them in instead of failing oddly
+    if (isDemoEmail(user.email)) {
+      return {
+        error:
+          'You are signed in with a demo account. Sign out, then sign up or sign in with your real email to create a shop.',
+      };
+    }
+
+    // Already owns a real (non-demo) shop — enter it
     const existingMembership = await prisma.membership.findFirst({
-      where: { userId: user.id, isActive: true, role: { in: ['COMPANY_OWNER', 'COMPANY_ADMIN'] } },
-      include: { company: true, branch: true },
+      where: {
+        userId: user.id,
+        isActive: true,
+        role: { in: ['COMPANY_OWNER', 'COMPANY_ADMIN'] },
+        company: { slug: { not: DEMO_COMPANY_SLUG } },
+      },
       orderBy: { createdAt: 'asc' },
     });
     if (existingMembership) {
-      try {
-        const cookieStore = await cookies();
-        cookieStore.set(WORKSPACE_COOKIE, existingMembership.companyId, {
-          path: '/',
-          maxAge: 60 * 60 * 24 * 365,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-        });
-        const branchId =
-          existingMembership.branchId ??
-          (
-            await prisma.branch.findFirst({
-              where: {
-                companyId: existingMembership.companyId,
-                isArchived: false,
-                deletedAt: null,
-              },
-              orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
-            })
-          )?.id;
-        if (branchId) {
-          cookieStore.set(BRANCH_COOKIE, branchId, {
-            path: '/',
-            maxAge: 60 * 60 * 24 * 365,
-            sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production',
-            httpOnly: true,
-          });
+      const branch =
+        (existingMembership.branchId &&
+          (await prisma.branch.findFirst({
+            where: { id: existingMembership.branchId, companyId: existingMembership.companyId },
+          }))) ||
+        (await prisma.branch.findFirst({
+          where: {
+            companyId: existingMembership.companyId,
+            isArchived: false,
+            deletedAt: null,
+          },
+          orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+        }));
+      if (branch) {
+        try {
+          await setWorkspaceCookies(existingMembership.companyId, branch.id);
+        } catch {
+          /* membership alone is enough */
         }
-      } catch {
-        /* membership alone is enough */
       }
       return { redirect: '/dashboard' };
     }
 
-    const existing = await prisma.company.findUnique({ where: { slug } });
-    const finalSlug = existing ? `${slug}-${Date.now().toString(36)}` : slug;
+    const locale = (formData.get('locale') as string)?.trim() || user.preferredLocale || 'en';
 
-    const created = await prisma.$transaction(async (tx) => {
-      const c = await tx.company.create({
-        data: {
+    const created = await prisma.$transaction(async (tx) =>
+      bootstrapCompanyForOwner(
+        user!,
+        {
           name,
-          slug: finalSlug,
-          plan: 'TRIAL',
-          currency: 'SAR',
-          locale: 'en',
-          timezone: 'Asia/Riyadh',
-          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          slug,
+          locale,
         },
-      });
-
-      const branch = await tx.branch.create({
-        data: {
-          companyId: c.id,
-          name: 'Main Branch',
-          slug: 'main',
-          isDefault: true,
-        },
-      });
-
-      await tx.membership.create({
-        data: {
-          userId: user!.id,
-          companyId: c.id,
-          branchId: null,
-          role: 'COMPANY_OWNER',
-        },
-      });
-
-      await seedCompanyFeatures(c.id, 'TRIAL', tx);
-      await ensureCompanyIntegrations(c.id, tx);
-
-      return { company: c, branch };
-    });
+        tx
+      )
+    );
 
     try {
-      const cookieStore = await cookies();
-      cookieStore.set(WORKSPACE_COOKIE, created.company.id, {
-        path: '/',
-        maxAge: 60 * 60 * 24 * 365,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-      });
-      cookieStore.set(BRANCH_COOKIE, created.branch.id, {
-        path: '/',
-        maxAge: 60 * 60 * 24 * 365,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-      });
-      cookieStore.delete('tenant-id');
+      await setWorkspaceCookies(created.company.id, created.branch.id);
     } catch (cookieErr) {
       console.error('[createCompanyWorkspace] cookie set failed', cookieErr);
     }
@@ -196,16 +147,7 @@ export async function createCompanyWorkspace(
         user,
         company: created.company,
         branch: created.branch,
-        membership: {
-          id: '',
-          userId: user.id,
-          companyId: created.company.id,
-          branchId: null,
-          role: 'COMPANY_OWNER',
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
+        membership: created.membership,
         role: 'COMPANY_OWNER',
         canAccessAllBranches: true,
         branchIds: [created.branch.id],
@@ -247,7 +189,9 @@ export async function isDatabaseConnected(): Promise<boolean> {
 
 export async function hasAnyTenant(): Promise<boolean> {
   try {
-    const count = await prisma.company.count();
+    const count = await prisma.company.count({
+      where: { slug: { not: DEMO_COMPANY_SLUG } },
+    });
     return count > 0;
   } catch {
     return false;
@@ -266,11 +210,24 @@ export async function switchWorkspace(companyId: string, branchId?: string) {
   const user = await ensurePrismaUser();
   if (!user) throw new Error('Not authenticated');
 
+  const company = await prisma.company.findUnique({ where: { id: companyId } });
+  if (!company) throw new Error('Company not found');
+
+  const demoUser = isDemoEmail(user.email);
+  const demoCo = isDemoCompanySlug(company.slug);
+  if (demoUser !== demoCo) {
+    throw new Error('Demo and production workspaces are isolated.');
+  }
+
   const membership = await prisma.membership.findFirst({
     where: { userId: user.id, companyId, isActive: true },
   });
   if (!membership && !user.isPlatformAdmin) {
     throw new Error('No access to this company');
+  }
+  // Platform admins still cannot enter demo from a production identity
+  if (!membership && user.isPlatformAdmin && demoCo && !demoUser) {
+    throw new Error('Demo and production workspaces are isolated.');
   }
 
   const branch = branchId
@@ -281,30 +238,22 @@ export async function switchWorkspace(companyId: string, branchId?: string) {
 
   if (!branch) throw new Error('Branch not found');
 
-  const cookieStore = await cookies();
-  cookieStore.set(WORKSPACE_COOKIE, companyId, {
-    path: '/',
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-  });
-  cookieStore.set(BRANCH_COOKIE, branch.id, {
-    path: '/',
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-  });
-
+  await setWorkspaceCookies(companyId, branch.id);
   return { ok: true };
 }
 
 export async function getMyMemberships() {
   const user = await ensurePrismaUser();
   if (!user) return [];
+  const demoUser = isDemoEmail(user.email);
   return prisma.membership.findMany({
-    where: { userId: user.id, isActive: true },
+    where: {
+      userId: user.id,
+      isActive: true,
+      company: demoUser
+        ? { slug: DEMO_COMPANY_SLUG }
+        : { slug: { not: DEMO_COMPANY_SLUG } },
+    },
     include: {
       company: true,
       branch: true,

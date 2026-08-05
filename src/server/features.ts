@@ -1,8 +1,12 @@
-import { FeatureModule, Plan, type PrismaClient } from '@prisma/client';
+import { FeatureModule, Plan, type Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import type { WorkspaceContext } from '@/server/auth';
 
-type FeatureDb = Pick<PrismaClient, 'companyFeatureFlag'>;
+type FeatureDb = {
+  companyFeatureFlag: {
+    createMany: (args: Prisma.CompanyFeatureFlagCreateManyArgs) => Promise<unknown>;
+  };
+};
 
 const PLAN_FEATURES: Record<Plan, FeatureModule[]> = {
   TRIAL: [

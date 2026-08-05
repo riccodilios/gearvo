@@ -2,11 +2,15 @@ import {
   IntegrationProvider,
   IntegrationStatus,
   type CompanyIntegration,
-  type PrismaClient,
+  type Prisma,
 } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
-type IntegrationDb = Pick<PrismaClient, 'companyIntegration'>;
+type IntegrationDb = {
+  companyIntegration: {
+    createMany: (args: Prisma.CompanyIntegrationCreateManyArgs) => Promise<unknown>;
+  };
+};
 
 export type IntegrationDefinition = {
   provider: IntegrationProvider;

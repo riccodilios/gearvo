@@ -11,6 +11,9 @@ import {
   PERMISSIONS,
   type Permission,
 } from '@/server/permissions';
+import { isDemoCompanySlug, isDemoEmail } from '@/server/demo-constants';
+import { ensureCompanyFeatureFlags } from '@/server/workspace-bootstrap';
+import { AppError } from '@/server/errors';
 
 export const WORKSPACE_COOKIE = 'gearvo-company-id';
 export const BRANCH_COOKIE = 'gearvo-branch-id';
@@ -58,6 +61,31 @@ export async function ensurePrismaUser(): Promise<User | null> {
       `${clerkId}@users.clerk.local`;
     const fullName =
       [cu.firstName, cu.lastName].filter(Boolean).join(' ') || cu.username || 'User';
+
+    // Re-link if a row exists for this email with a stale clerkId (e.g. after re-provision)
+    const byEmail = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+    });
+    if (byEmail && byEmail.clerkId !== clerkId) {
+      const clash = await prisma.user.findUnique({ where: { clerkId } });
+      if (clash && clash.id !== byEmail.id) {
+        await prisma.membership.updateMany({
+          where: { userId: clash.id },
+          data: { userId: byEmail.id },
+        });
+        await prisma.user.delete({ where: { id: clash.id } }).catch(() => undefined);
+      }
+      return prisma.user.update({
+        where: { id: byEmail.id },
+        data: {
+          clerkId,
+          email,
+          fullName,
+          avatarUrl: cu.imageUrl ?? null,
+        },
+      });
+    }
+
     user = await prisma.user.create({
       data: {
         clerkId,
@@ -74,7 +102,7 @@ export async function ensurePrismaUser(): Promise<User | null> {
       where: { clerkId },
       create: {
         clerkId,
-        email: 'owner@demo.gearvo.local',
+        email: 'demo.owner@gearvo.app',
         fullName: 'Demo Owner',
         isPlatformAdmin: true,
       },
@@ -93,14 +121,21 @@ export const getWorkspaceContext = cache(async (): Promise<WorkspaceContext | nu
   const cookieStore = await cookies();
   const preferredCompanyId = cookieStore.get(WORKSPACE_COOKIE)?.value;
   const preferredBranchId = cookieStore.get(BRANCH_COOKIE)?.value;
+  const demoUser = isDemoEmail(user.email);
 
-  const memberships = await prisma.membership.findMany({
+  const allMemberships = await prisma.membership.findMany({
     where: { userId: user.id, isActive: true },
     include: {
       company: true,
       branch: true,
     },
     orderBy: { createdAt: 'asc' },
+  });
+
+  // Hard isolation: demo accounts only see demo-auto; production accounts never see demo-auto
+  const memberships = allMemberships.filter((m) => {
+    const isDemoCo = isDemoCompanySlug(m.company.slug);
+    return demoUser ? isDemoCo : !isDemoCo;
   });
 
   if (!memberships.length) {
@@ -127,11 +162,9 @@ export const getWorkspaceContext = cache(async (): Promise<WorkspaceContext | nu
 
   const company = membership.company;
 
-  // H1: only company-wide roles (or platform admin) see all branches — never null branchId alone
   const canAccessAllBranches =
     user.isPlatformAdmin || isCompanyWideRole(membership.role);
 
-  // Branch-scoped roles must have a branchId
   if (!canAccessAllBranches && !membership.branchId) {
     return null;
   }
@@ -214,8 +247,6 @@ export function companyScope(ctx: WorkspaceContext) {
   return { companyId: ctx.company.id };
 }
 
-import { AppError } from '@/server/errors';
-
 export async function requireWorkspace(): Promise<WorkspaceContext> {
   const ctx = await getWorkspaceContext();
   if (!ctx) {
@@ -261,6 +292,9 @@ export async function getNavAccess(): Promise<{
   const ctx = await getWorkspaceContext();
   if (!ctx) return null;
 
+  // Heal companies that were created without feature flags
+  await ensureCompanyFeatureFlags(ctx.company.id, ctx.company.plan);
+
   const perms = ctx.user.isPlatformAdmin
     ? ([...PERMISSIONS] as Permission[])
     : [...permissionsForRole(ctx.role)];
@@ -276,4 +310,24 @@ export async function getNavAccess(): Promise<{
     isPlatformAdmin: ctx.user.isPlatformAdmin,
     canAccessAllBranches: ctx.canAccessAllBranches,
   };
+}
+
+export async function setWorkspaceCookies(companyId: string, branchId: string) {
+  const cookieStore = await cookies();
+  const secure = process.env.NODE_ENV === 'production';
+  cookieStore.set(WORKSPACE_COOKIE, companyId, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: 'lax',
+    secure,
+    httpOnly: true,
+  });
+  cookieStore.set(BRANCH_COOKIE, branchId, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: 'lax',
+    secure,
+    httpOnly: true,
+  });
+  cookieStore.delete('tenant-id');
 }

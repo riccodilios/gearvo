@@ -46,7 +46,7 @@ export function SetupPageClient({ dbConnected }: { dbConnected: boolean }) {
             <CreateShopForm />
             <p className="mt-6 text-center text-sm text-zinc-500">
               {t.onboarding.alreadyHaveShop}{' '}
-              <Link href="/dashboard" className="text-amber-500 hover:underline">
+              <Link href="/welcome" className="text-amber-500 hover:underline">
                 {t.onboarding.goDashboard}
               </Link>
             </p>

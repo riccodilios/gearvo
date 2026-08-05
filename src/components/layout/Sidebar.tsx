@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { SignedIn, UserButton } from '@clerk/nextjs';
+import { SignedIn, UserButton, useClerk } from '@clerk/nextjs';
 import {
   LayoutDashboard,
   Users,
@@ -57,11 +57,18 @@ const navItems: NavItem[] = [
 function SignOutButton() {
   const router = useRouter();
   const { t } = useI18n();
+  const { signOut } = useClerk();
   const [loading, setLoading] = useState(false);
   const handleSignOut = async () => {
     setLoading(true);
-    const { redirect } = await clearTenantAndSignOut();
-    router.push(redirect);
+    try {
+      await clearTenantAndSignOut();
+      await signOut({ redirectUrl: '/' });
+    } catch {
+      router.push('/');
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <Button

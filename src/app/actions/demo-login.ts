@@ -2,9 +2,10 @@
 
 import { prisma } from '@/lib/db';
 import { assertRateLimit } from '@/server/rate-limit';
-import { DEMO_COMPANY_SLUG } from '@/server/demo-seed';
+import { DEMO_COMPANY_SLUG, DEMO_EMAILS, isDemoEmail } from '@/server/demo-constants';
+import { ensurePrismaUser, setWorkspaceCookies } from '@/server/auth';
 
-const DEMO_EMAILS = new Set(['demo.owner@gearvo.app', 'demo.manager@gearvo.app']);
+const DEMO_EMAIL_SET = new Set<string>(DEMO_EMAILS);
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'GearvoDemo2026!';
 
 async function clerkFetch(path: string, init?: RequestInit) {
@@ -34,7 +35,7 @@ export async function enterDemoWithPassword(emailRaw: string, password: string) 
   const email = emailRaw.trim().toLowerCase();
   await assertRateLimit(`demo-enter:${email}`, 10, 60_000);
 
-  if (!DEMO_EMAILS.has(email) || password !== DEMO_PASSWORD) {
+  if (!DEMO_EMAIL_SET.has(email) || password !== DEMO_PASSWORD) {
     return { ok: false as const, error: 'Invalid demo email or password.' };
   }
 
@@ -62,7 +63,6 @@ export async function enterDemoWithPassword(emailRaw: string, password: string) 
     };
   }
 
-  // Best-effort: disable MFA so password sign-in is cleaner too
   try {
     await clerkFetch(`/users/${user.clerkId}/disable_mfa`, { method: 'POST' });
   } catch {
@@ -73,7 +73,7 @@ export async function enterDemoWithPassword(emailRaw: string, password: string) 
     method: 'POST',
     body: JSON.stringify({
       user_id: user.clerkId,
-      expires_in_seconds: 60 * 10, // 10 minutes
+      expires_in_seconds: 60 * 10,
     }),
   });
 
@@ -84,7 +84,47 @@ export async function enterDemoWithPassword(emailRaw: string, password: string) 
   return {
     ok: true as const,
     ticket: token.token,
-    /** Isolated app entry for demo — not the marketing “Sign in” path */
     redirectTo: '/dashboard?demo=1',
   };
+}
+
+/** After Clerk demo session is active, bind workspace cookies to demo-auto only. */
+export async function activateDemoWorkspace() {
+  const user = await ensurePrismaUser();
+  if (!user || !isDemoEmail(user.email)) {
+    return { ok: false as const, error: 'Not a demo session.' };
+  }
+
+  const membership = await prisma.membership.findFirst({
+    where: {
+      userId: user.id,
+      isActive: true,
+      company: { slug: DEMO_COMPANY_SLUG },
+    },
+    include: { company: true },
+  });
+  if (!membership) {
+    return { ok: false as const, error: 'Demo membership missing.' };
+  }
+
+  const branch =
+    (membership.branchId &&
+      (await prisma.branch.findFirst({
+        where: { id: membership.branchId, companyId: membership.companyId },
+      }))) ||
+    (await prisma.branch.findFirst({
+      where: {
+        companyId: membership.companyId,
+        isArchived: false,
+        deletedAt: null,
+      },
+      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+    }));
+
+  if (!branch) {
+    return { ok: false as const, error: 'Demo branch missing.' };
+  }
+
+  await setWorkspaceCookies(membership.companyId, branch.id);
+  return { ok: true as const, redirectTo: '/dashboard?demo=1' };
 }

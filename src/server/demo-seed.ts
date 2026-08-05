@@ -5,15 +5,16 @@
 import type { PrismaClient } from '@prisma/client';
 import { FeatureModule, IntegrationStatus } from '@prisma/client';
 
+import { DEMO_COMPANY_SLUG } from '@/server/demo-constants';
 import {
   DEMO_PRESENTATION_ACCOUNTS,
   linkDemoClerkAccounts,
   resolveDemoStaffUser,
 } from '@/server/demo-clerk-link';
 
-export const DEMO_COMPANY_SLUG = 'demo-auto';
+export { DEMO_COMPANY_SLUG };
 export const DEMO_OWNER_CLERK_ID = 'dev_clerk_owner';
-/** Presentation login email (Clerk). Local placeholder seeds may still use *.gearvo.local. */
+/** Presentation login email (Clerk). */
 export const DEMO_OWNER_EMAIL = 'demo.owner@gearvo.app';
 
 const ALL_FEATURES = Object.values(FeatureModule);

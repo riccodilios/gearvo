@@ -50,14 +50,14 @@ function AlreadySignedIn() {
           </Button>
         </SignOutButton>
         <Button asChild variant="outline" className="w-full">
-          <Link href={isDemo ? '/demo' : '/dashboard'}>
+          <Link href={isDemo ? '/demo' : '/welcome'}>
             {isDemo
               ? locale === 'ar'
                 ? 'العودة للعرض'
                 : 'Back to demo'
               : locale === 'ar'
-                ? 'لوحة التحكم'
-                : 'Dashboard'}
+                ? 'متابعة'
+                : 'Continue'}
           </Link>
         </Button>
       </div>
@@ -73,7 +73,7 @@ export function SignUpClient() {
         <SignUp
           key={locale}
           appearance={appearance}
-          fallbackRedirectUrl="/welcome/setup"
+          fallbackRedirectUrl="/welcome"
           signInUrl="/sign-in"
         />
       </SignedOut>
