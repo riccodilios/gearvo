@@ -1,5 +1,9 @@
+# Netlify build config for Gearvo (Next.js + Prisma + Supabase)
+# Set DATABASE_URL in Netlify env (Supabase pooler). Migrations are applied from CI/local;
+# keep generate in the build so the client matches the schema.
+
 [build]
-  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
+  command = "npx prisma generate && npm run build"
 
 [build.environment]
   NODE_VERSION = "20"
