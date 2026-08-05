@@ -4,16 +4,19 @@ import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 import { SignOutButton } from '@clerk/nextjs';
 
-/** Shown when there is no workspace (empty auth / missing company). */
-export function DemoBanner() {
+/**
+ * Shown when the signed-in user has no company membership.
+ * Not demo mode — they need to create (or join) a shop.
+ */
+export function NoWorkspaceBanner() {
   return (
     <div className="border-b border-amber-900/50 bg-amber-950/30 px-4 py-3">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 text-sm text-amber-200">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
+        <div className="flex items-start gap-2 text-sm text-amber-200">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            Demo mode: data is not saved. Connect PostgreSQL and create your shop to save customers,
-            orders, and more.
+            You are signed in but not linked to a shop yet. Create your company to unlock customers,
+            repair orders, inventory, and the rest of Gearvo.
           </span>
         </div>
         <Link
@@ -25,6 +28,11 @@ export function DemoBanner() {
       </div>
     </div>
   );
+}
+
+/** @deprecated alias — was misleadingly labeled “Demo mode” for users with no workspace */
+export function DemoBanner() {
+  return <NoWorkspaceBanner />;
 }
 
 /** Shown inside the isolated Al-Noor presentation company. */
