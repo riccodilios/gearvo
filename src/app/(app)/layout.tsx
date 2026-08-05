@@ -5,6 +5,9 @@ import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 import { getWorkspaceContext, getNavAccess } from '@/server/auth';
 import { listBranches } from '@/app/actions/workspace';
 
+/** Auth/workspace-bound routes must not be statically prerendered at build time. */
+export const dynamic = 'force-dynamic';
+
 export default async function AppLayout({
   children,
 }: {
