@@ -1,6 +1,3 @@
-# Netlify build config for Gearvo (Next.js + Prisma + Supabase)
-# Requires DATABASE_URL (pooled) and DIRECT_URL (direct) env vars.
-
 [build]
   command = "npx prisma generate && npx prisma migrate deploy && npm run build"
 

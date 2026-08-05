@@ -8,11 +8,10 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  /// Pooled connection (Supabase Transaction pooler / port 6543) — use in the app & Netlify.
-  url       = env("DATABASE_URL")
-  /// Direct connection (Supabase session / port 5432) — required for Prisma migrations.
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  /// Supabase PostgreSQL. Prefer Transaction pooler (port 6543, pgbouncer=true) on Netlify.
+  /// For migrations from CI, Session pooler (port 5432) or direct db host also works.
+  url      = env("DATABASE_URL")
 }
 
 // ============ PLATFORM / COMPANY / BRANCH ============
