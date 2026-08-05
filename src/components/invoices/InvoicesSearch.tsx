@@ -23,7 +23,7 @@ export function InvoicesSearch() {
         placeholder="Search by invoice # or customer..."
         defaultValue={q}
         onChange={(e) => handleSearch(e.target.value)}
-        className="pl-9"
+        className="ps-9"
       />
     </div>
   );

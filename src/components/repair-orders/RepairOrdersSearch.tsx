@@ -23,7 +23,7 @@ export function RepairOrdersSearch() {
         placeholder="Search by customer, order #, or description..."
         defaultValue={q}
         onChange={(e) => handleSearch(e.target.value)}
-        className="pl-9"
+        className="ps-9"
       />
     </div>
   );

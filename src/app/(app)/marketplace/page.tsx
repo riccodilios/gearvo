@@ -1,4 +1,6 @@
 import { getSuppliersWithParts, getPurchaseOrders } from '@/app/actions/marketplace';
+import { gatePage } from '@/server/page-gate';
+import { FeatureModule } from '@prisma/client';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,10 +13,12 @@ function toNum(v: unknown): number {
 }
 
 export default async function MarketplacePage() {
-  const [suppliersWithParts, orders] = await Promise.all([
+  await gatePage('marketplace:read', FeatureModule.MARKETPLACE);
+  const [suppliersWithParts, ordersResult] = await Promise.all([
     getSuppliersWithParts(),
     getPurchaseOrders(),
   ]);
+  const orders = ordersResult.items;
 
   const suppliersWithPartsToOrder = suppliersWithParts.filter((s) => s.carParts.length > 0);
 

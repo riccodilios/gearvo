@@ -186,7 +186,7 @@ export default async function CustomerDetailPage({
                   {customer.repairOrders.map((ro) => (
                     <Link
                       key={ro.id}
-                      href="/repair-orders"
+                      href={`/repair-orders/${ro.id}`}
                       className="flex justify-between rounded-lg border border-zinc-800 p-4 transition-colors hover:bg-zinc-800/50"
                     >
                       <div>

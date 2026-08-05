@@ -1,251 +1,299 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { getTenantId } from '@/lib/tenant';
-import { startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from 'date-fns';
-
-const DEFAULT_STATS = {
-  todayRevenue: 0,
-  thisMonthRevenue: 0,
-  lastMonthRevenue: 0,
-  monthOverMonth: 0,
-  outstandingBalance: 0,
-  overdueCount: 0,
-  totalProfit: 0,
-  lowStockCount: 0,
-  activeRepairs: 0,
-  totalCustomers: 0,
-  upcomingInstallments: 0,
-  nextMonthForecast: 0,
-};
+import { getWorkspaceContext, branchScope } from '@/server/auth';
 
 export async function getDashboardStats() {
-  const tenantId = await getTenantId();
-  if (!tenantId) return DEFAULT_STATS;
+  const ctx = await getWorkspaceContext();
+  if (!ctx) {
+    return {
+      revenueToday: 0,
+      revenueWeek: 0,
+      revenueMonth: 0,
+      revenueYear: 0,
+      profitMonth: 0,
+      outstanding: 0,
+      upcomingInstallments: 0,
+      inventoryValue: 0,
+      lowStockCount: 0,
+      openRepairs: 0,
+      customersCount: 0,
+      forecastNextMonth: 0,
+    };
+  }
 
+  const scope = branchScope(ctx);
   const now = new Date();
-  const todayStart = startOfDay(now);
-  const todayEnd = endOfDay(now);
-  const thisMonthStart = startOfMonth(now);
-  const thisMonthEnd = endOfMonth(now);
-  const lastMonthStart = startOfMonth(subMonths(now, 1));
-  const lastMonthEnd = endOfMonth(subMonths(now, 1));
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfDay);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-  const [todayRevenue, thisMonthRevenue, lastMonthRevenue, outstandingBalance, overdueCount, totalProfit, lowStockCount, activeRepairs, totalCustomers, upcomingInstallments] =
-    await Promise.all([
-      prisma.payment.aggregate({
-        where: {
-          tenantId,
-          paymentDate: { gte: todayStart, lte: todayEnd },
-        },
-        _sum: { amount: true },
-      }),
-      prisma.payment.aggregate({
-        where: {
-          tenantId,
-          paymentDate: { gte: thisMonthStart, lte: thisMonthEnd },
-        },
-        _sum: { amount: true },
-      }),
-      prisma.payment.aggregate({
-        where: {
-          tenantId,
-          paymentDate: { gte: lastMonthStart, lte: lastMonthEnd },
-        },
-        _sum: { amount: true },
-      }),
-      prisma.invoice.aggregate({
-        where: { tenantId, status: { in: ['UNPAID', 'PARTIAL', 'OVERDUE'] } },
-        _sum: { remainingBalance: true },
-      }),
-      prisma.invoice.count({
-        where: { tenantId, status: 'OVERDUE' },
-      }),
-      prisma.repairOrder.aggregate({
-        where: { tenantId, status: { in: ['COMPLETED', 'DELIVERED'] } },
-        _sum: { profit: true },
-      }),
-      (async () => {
-        const parts = await prisma.carPart.findMany({
-          where: { tenantId },
-          select: { stockQuantity: true, minStockLevel: true },
-        });
-        return parts.filter((p) => p.stockQuantity <= p.minStockLevel).length;
-      })(),
-      prisma.repairOrder.count({
-        where: {
-          tenantId,
-          status: { in: ['PENDING', 'IN_PROGRESS', 'WAITING_PARTS'] },
-        },
-      }),
-      prisma.customer.count({ where: { tenantId } }),
-      prisma.installment.count({
-        where: {
-          tenantId,
-          status: 'PENDING',
-          dueDate: { gte: now, lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
-        },
-      }),
-    ]);
+  const [
+    paymentsToday,
+    paymentsWeek,
+    paymentsMonth,
+    paymentsYear,
+    repairsMonth,
+    outstandingAgg,
+    installments,
+    inventoryAgg,
+    lowStockCount,
+    openRepairs,
+    customersCount,
+  ] = await Promise.all([
+    prisma.payment.aggregate({
+      where: { ...scope, paymentDate: { gte: startOfDay } },
+      _sum: { amount: true },
+    }),
+    prisma.payment.aggregate({
+      where: { ...scope, paymentDate: { gte: startOfWeek } },
+      _sum: { amount: true },
+    }),
+    prisma.payment.aggregate({
+      where: { ...scope, paymentDate: { gte: startOfMonth } },
+      _sum: { amount: true },
+    }),
+    prisma.payment.aggregate({
+      where: { ...scope, paymentDate: { gte: startOfYear } },
+      _sum: { amount: true },
+    }),
+    prisma.repairOrder.aggregate({
+      where: {
+        ...scope,
+        deletedAt: null,
+        createdAt: { gte: startOfMonth },
+        status: { in: ['COMPLETED', 'DELIVERED'] },
+      },
+      _sum: { profit: true },
+    }),
+    prisma.invoice.aggregate({
+      where: {
+        ...scope,
+        deletedAt: null,
+        status: { in: ['UNPAID', 'PARTIAL', 'OVERDUE'] },
+      },
+      _sum: { remainingBalance: true },
+    }),
+    prisma.installment.aggregate({
+      where: {
+        ...scope,
+        status: { in: ['PENDING', 'OVERDUE'] },
+        dueDate: { lte: in30 },
+      },
+      _sum: { amount: true },
+    }),
+    prisma.$queryRaw<[{ value: number | null }]>`
+      SELECT COALESCE(SUM("costPrice" * "stockQuantity"), 0)::float AS value
+      FROM "CarPart"
+      WHERE "companyId" = ${scope.companyId}
+        AND "branchId" = ${scope.branchId}
+        AND "deletedAt" IS NULL
+    `,
+    prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM "CarPart"
+      WHERE "companyId" = ${scope.companyId}
+        AND "branchId" = ${scope.branchId}
+        AND "deletedAt" IS NULL
+        AND "stockQuantity" <= "minStockLevel"
+    `,
+    prisma.repairOrder.count({
+      where: {
+        ...scope,
+        deletedAt: null,
+        status: { in: ['PENDING', 'IN_PROGRESS', 'WAITING_PARTS'] },
+      },
+    }),
+    prisma.customer.count({ where: { ...scope, deletedAt: null } }),
+  ]);
 
-  const lastMonthRev = Number(lastMonthRevenue._sum.amount ?? 0);
-  const thisMonthRev = Number(thisMonthRevenue._sum.amount ?? 0);
-  const monthOverMonth =
-    lastMonthRev > 0
-      ? ((thisMonthRev - lastMonthRev) / lastMonthRev) * 100
-      : 0;
-
-  const nextMonthForecast = thisMonthRev > 0 ? thisMonthRev * 1.05 : 0;
+  const revenueMonth = Number(paymentsMonth._sum.amount ?? 0);
 
   return {
-    todayRevenue: Number(todayRevenue._sum.amount ?? 0),
-    thisMonthRevenue: thisMonthRev,
-    lastMonthRevenue: lastMonthRev,
-    monthOverMonth,
-    outstandingBalance: Number(outstandingBalance._sum.remainingBalance ?? 0),
-    overdueCount,
-    totalProfit: Number(totalProfit._sum.profit ?? 0),
-    lowStockCount: lowStockCount,
-    activeRepairs,
-    totalCustomers,
-    upcomingInstallments,
-    nextMonthForecast,
+    revenueToday: Number(paymentsToday._sum.amount ?? 0),
+    revenueWeek: Number(paymentsWeek._sum.amount ?? 0),
+    revenueMonth,
+    revenueYear: Number(paymentsYear._sum.amount ?? 0),
+    profitMonth: Number(repairsMonth._sum.profit ?? 0),
+    outstanding: Number(outstandingAgg._sum.remainingBalance ?? 0),
+    upcomingInstallments: Number(installments._sum.amount ?? 0),
+    inventoryValue: Number(inventoryAgg[0]?.value ?? 0),
+    lowStockCount: Number(lowStockCount[0]?.count ?? 0),
+    openRepairs,
+    customersCount,
+    forecastNextMonth: revenueMonth * 1.05,
   };
 }
 
 export async function getRevenueTrend(months = 6) {
-  const tenantId = await getTenantId();
-  if (!tenantId) {
-    return Array.from({ length: months }, (_, i) => {
-      const date = subMonths(new Date(), months - 1 - i);
-      return {
-        month: date.toLocaleString('default', { month: 'short', year: '2-digit' }),
-        revenue: 0,
-      };
-    });
-  }
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return [];
+  const scope = branchScope(ctx);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
 
-  const results: { month: string; revenue: number }[] = [];
+  const payments = await prisma.payment.findMany({
+    where: { ...scope, paymentDate: { gte: start } },
+    select: { amount: true, paymentDate: true },
+  });
+  const repairs = await prisma.repairOrder.findMany({
+    where: {
+      ...scope,
+      deletedAt: null,
+      createdAt: { gte: start },
+      status: { in: ['COMPLETED', 'DELIVERED'] },
+    },
+    select: { profit: true, createdAt: true },
+  });
 
+  const result: { month: string; revenue: number; profit: number }[] = [];
   for (let i = months - 1; i >= 0; i--) {
-    const date = subMonths(new Date(), i);
-    const start = startOfMonth(date);
-    const end = endOfMonth(date);
-
-    const agg = await prisma.payment.aggregate({
-      where: {
-        tenantId,
-        paymentDate: { gte: start, lte: end },
-      },
-      _sum: { amount: true },
-    });
-
-    results.push({
-      month: date.toLocaleString('default', { month: 'short', year: '2-digit' }),
-      revenue: Number(agg._sum.amount ?? 0),
+    const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+    const revenue = payments
+      .filter((p) => p.paymentDate >= mStart && p.paymentDate < mEnd)
+      .reduce((s, p) => s + Number(p.amount), 0);
+    const profit = repairs
+      .filter((r) => r.createdAt >= mStart && r.createdAt < mEnd)
+      .reduce((s, r) => s + Number(r.profit), 0);
+    result.push({
+      month: mStart.toLocaleString('en', { month: 'short', year: '2-digit' }),
+      revenue,
+      profit,
     });
   }
-
-  return results;
+  return result;
 }
 
-export async function getDailyRevenue(month?: Date) {
-  const tenantId = await getTenantId();
-  const targetMonth = month ?? new Date();
-  const end = endOfMonth(targetMonth);
+export async function getDailyRevenue(days = 14) {
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return [];
+  const scope = branchScope(ctx);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
 
-  if (!tenantId) {
-    const days = end.getDate();
-    return Array.from({ length: days }, (_, i) => ({
-      day: String(i + 1),
-      revenue: 0,
-    }));
-  }
-
-  const start = startOfMonth(targetMonth);
   const payments = await prisma.payment.findMany({
-    where: {
-      tenantId,
-      paymentDate: { gte: start, lte: end },
-    },
+    where: { ...scope, paymentDate: { gte: start } },
     select: { amount: true, paymentDate: true },
   });
 
-  const byDay: Record<number, number> = {};
-  for (let d = 1; d <= end.getDate(); d++) byDay[d] = 0;
-  payments.forEach((p) => {
-    const day = new Date(p.paymentDate).getDate();
-    byDay[day] = (byDay[day] ?? 0) + Number(p.amount);
-  });
-
-  return Object.entries(byDay).map(([day, revenue]) => ({ day, revenue }));
+  const result: { date: string; revenue: number }[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const dStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const dEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1);
+    const revenue = payments
+      .filter((p) => p.paymentDate >= dStart && p.paymentDate < dEnd)
+      .reduce((s, p) => s + Number(p.amount), 0);
+    result.push({
+      date: dStart.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+      revenue,
+    });
+  }
+  return result;
 }
 
 export async function getPaymentMethodsStats() {
-  const tenantId = await getTenantId();
-  if (!tenantId) {
-    return [
-      { name: 'Cash', value: 0 },
-      { name: 'Card', value: 0 },
-      { name: 'Bank Transfer', value: 0 },
-      { name: 'Check', value: 0 },
-      { name: 'Other', value: 0 },
-    ];
-  }
+  return getPaymentMethodsBreakdown();
+}
 
+export async function getPaymentMethodsBreakdown() {
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return [];
+  const scope = branchScope(ctx);
   const payments = await prisma.payment.groupBy({
     by: ['method'],
-    where: { tenantId },
+    where: scope,
     _sum: { amount: true },
   });
-
-  const labels: Record<string, string> = {
-    CASH: 'Cash',
-    CARD: 'Card',
-    BANK_TRANSFER: 'Bank Transfer',
-    CHECK: 'Check',
-    STRIPE: 'Stripe',
-    OTHER: 'Other',
-  };
   return payments.map((p) => ({
-    name: labels[p.method] ?? p.method,
-    value: Number(p._sum.amount ?? 0),
-  })).filter((p) => p.value > 0);
+    method: p.method,
+    amount: Number(p._sum.amount ?? 0),
+  }));
 }
 
 export async function getRevenueByCategory() {
-  const tenantId = await getTenantId();
-  if (!tenantId) return [];
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return [];
+  const scope = branchScope(ctx);
 
-  const parts = await prisma.repairOrderPart.findMany({
-    where: { repairOrder: { tenantId } },
-    include: {
-      carPart: true,
-      repairOrder: { select: { tenantId: true } },
-    },
-  });
+  const rows = await prisma.$queryRaw<
+    { category: string | null; amount: number }[]
+  >`
+    SELECT COALESCE(cp.category, 'Uncategorized') AS category,
+           SUM(rop."retailPrice" * rop.quantity)::float AS amount
+    FROM "RepairOrderPart" rop
+    JOIN "RepairOrder" ro ON ro.id = rop."repairOrderId"
+    JOIN "CarPart" cp ON cp.id = rop."carPartId"
+    WHERE ro."companyId" = ${scope.companyId}
+      AND ro."branchId" = ${scope.branchId}
+      AND ro."deletedAt" IS NULL
+    GROUP BY COALESCE(cp.category, 'Uncategorized')
+    ORDER BY amount DESC
+    LIMIT 20
+  `;
 
-  const byCategory: Record<string, number> = {};
-  parts.forEach((p) => {
-    const cat = p.carPart.category ?? 'Uncategorized';
-    const total = Number(p.retailPrice) * p.quantity;
-    byCategory[cat] = (byCategory[cat] ?? 0) + total;
-  });
-
-  return Object.entries(byCategory).map(([name, value]) => ({ name, value }));
+  return rows.map((r) => ({
+    category: r.category ?? 'Uncategorized',
+    amount: Number(r.amount ?? 0),
+  }));
 }
 
 export async function getRecentRepairOrders(limit = 5) {
-  const tenantId = await getTenantId();
-  if (!tenantId) return [];
-
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return [];
   return prisma.repairOrder.findMany({
-    where: { tenantId },
+    where: { ...branchScope(ctx), deletedAt: null },
     orderBy: { createdAt: 'desc' },
     take: limit,
-    include: {
-      customer: true,
-      vehicle: true,
-    },
+    include: { customer: true, vehicle: true },
   });
+}
+
+export async function getBranchComparison() {
+  const ctx = await getWorkspaceContext();
+  if (!ctx || !ctx.canAccessAllBranches) return [];
+
+  const branches = await prisma.branch.findMany({
+    where: { companyId: ctx.company.id, isArchived: false, deletedAt: null },
+  });
+
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  return Promise.all(
+    branches.map(async (b) => {
+      const [revenue, repairs, customers] = await Promise.all([
+        prisma.payment.aggregate({
+          where: {
+            companyId: ctx.company.id,
+            branchId: b.id,
+            paymentDate: { gte: startOfMonth },
+          },
+          _sum: { amount: true },
+        }),
+        prisma.repairOrder.count({
+          where: {
+            companyId: ctx.company.id,
+            branchId: b.id,
+            deletedAt: null,
+            createdAt: { gte: startOfMonth },
+          },
+        }),
+        prisma.customer.count({
+          where: { companyId: ctx.company.id, branchId: b.id, deletedAt: null },
+        }),
+      ]);
+      return {
+        branchId: b.id,
+        branchName: b.name,
+        revenue: Number(revenue._sum.amount ?? 0),
+        repairs,
+        customers,
+      };
+    })
+  );
 }

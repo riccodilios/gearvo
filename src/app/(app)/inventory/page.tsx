@@ -23,16 +23,10 @@ export default async function InventoryPage({
 }) {
   const params = await searchParams;
   const category = params.category ?? 'all';
-  const query = params.q?.toLowerCase() ?? '';
-  const parts = await getCarParts(category);
+  const query = params.q ?? '';
+  const { items: parts } = await getCarParts({ category, q: query, pageSize: 100 });
   const categories = [...new Set(parts.map((p) => p.category).filter(Boolean))] as string[];
-  const filtered = query
-    ? parts.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.partNumber?.toLowerCase().includes(query)
-      )
-    : parts;
+  const filtered = parts;
 
   const margin = (retail: number, cost: number) =>
     cost > 0 ? ((retail - cost) / cost * 100).toFixed(1) : '0';
@@ -47,7 +41,7 @@ export default async function InventoryPage({
           <CarPartFormDialog
             trigger={
               <Button>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Add Part
               </Button>
             }

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { ClerkProvider } from '@clerk/nextjs';
 
 const appearance = {
@@ -22,8 +21,7 @@ const appearance = {
 };
 
 /**
- * Wraps children in ClerkProvider only on the client after mount.
- * This avoids running any Clerk code during server render, which can throw on some hosts (e.g. Netlify).
+ * Wraps children in ClerkProvider when Clerk is configured.
  */
 export function ClerkWrapper({
   children,
@@ -32,10 +30,7 @@ export function ClerkWrapper({
   children: React.ReactNode;
   useClerk: boolean;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  if (!useClerk || !mounted) {
+  if (!useClerk) {
     return <>{children}</>;
   }
   return <ClerkProvider appearance={appearance}>{children}</ClerkProvider>;

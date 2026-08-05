@@ -7,15 +7,23 @@ import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PaymentDialog } from '@/components/invoices/PaymentDialog';
 import { PaymentMethodSelect } from '@/components/invoices/PaymentMethodSelect';
+import {
+  InstallmentPlanDialog,
+  MarkInstallmentPaidButton,
+} from '@/components/invoices/InstallmentPlanDialog';
 
 export default async function InvoiceDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ pay?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const invoice = await getInvoice(id);
   if (!invoice) notFound();
+  const openPay = sp.pay === '1' && invoice.status !== 'PAID';
 
   return (
     <div className="space-y-8">
@@ -23,13 +31,23 @@ export default async function InvoiceDetailPage({
         title={`Invoice ${invoice.invoiceNumber}`}
         description={`Customer: ${invoice.customer.fullName}`}
         actions={
-          invoice.status !== 'PAID' && (
-            <PaymentDialog
-              invoiceId={invoice.id}
-              remainingBalance={Number(invoice.remainingBalance)}
-              trigger={<Button>Record Payment</Button>}
-            />
-          )
+          <div className="flex flex-wrap gap-2">
+            {invoice.status !== 'PAID' && (
+              <PaymentDialog
+                invoiceId={invoice.id}
+                remainingBalance={Number(invoice.remainingBalance)}
+                defaultOpen={openPay}
+                trigger={<Button>Record Payment</Button>}
+              />
+            )}
+            {invoice.status !== 'PAID' && Number(invoice.remainingBalance) > 0 && (
+              <InstallmentPlanDialog
+                invoiceId={invoice.id}
+                remainingBalance={Number(invoice.remainingBalance)}
+                trigger={<Button variant="outline">Installment plan</Button>}
+              />
+            )}
+          </div>
         }
       />
 
@@ -172,9 +190,14 @@ export default async function InvoiceDetailPage({
                       Due: {formatDate(inst.dueDate)}
                     </p>
                   </div>
-                  <Badge variant={inst.status === 'PAID' ? 'success' : 'warning'}>
-                    {inst.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={inst.status === 'PAID' ? 'success' : 'warning'}>
+                      {inst.status}
+                    </Badge>
+                    {inst.status !== 'PAID' && (
+                      <MarkInstallmentPaidButton installmentId={inst.id} />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

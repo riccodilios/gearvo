@@ -26,7 +26,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        'rounded-lg border border-zinc-800 bg-zinc-950 p-6 shadow-sm transition-colors hover:border-zinc-700',
+        'rounded-xl border border-zinc-800 bg-zinc-950/80 p-5 shadow-sm transition-colors hover:border-zinc-700 sm:p-6',
         className
       )}
       {...props}

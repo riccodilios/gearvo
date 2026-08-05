@@ -59,13 +59,15 @@ From the project root:
 
 ```bash
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 npx prisma db seed
 ```
 
 - **generate** – builds the Prisma client  
-- **db push** – creates/updates tables in your database  
-- **db seed** – creates demo tenant “Demo Auto Shop”, sample customers, vehicles, parts, repair orders, invoices
+- **migrate deploy** – applies versioned migrations (use `migrate dev` while developing)  
+- **db seed** – creates demo company “Al-Noor Auto Care” (`demo-auto`), branches, customers, vehicles, parts, repairs, invoices
+
+For local demo **without Clerk**, add `ALLOW_DEV_AUTH_BYPASS=true` to `.env` (never in production).
 
 If any command fails, check that PostgreSQL is running and `DATABASE_URL` in `.env` is correct (user, password, host, port, database name).
 
@@ -78,6 +80,8 @@ npm run dev
 ```
 
 Open **http://localhost:3000**.
+
+See also [ARCHITECTURE.md](./ARCHITECTURE.md) for Company → Branch tenancy and RBAC.
 
 ---
 
@@ -126,9 +130,9 @@ The app runs and all core features (customers, vehicles, suppliers, inventory, r
 |------|--------|
 | Dev server | `npm run dev` |
 | Regenerate Prisma client | `npx prisma generate` |
-| Apply schema to DB | `npx prisma db push` |
+| Apply schema to DB | `npx prisma migrate deploy` |
 | Seed demo data | `npx prisma db seed` |
 | Open DB GUI | `npx prisma studio` |
 | Production build | `npm run build` && `npm start` |
 
-If something doesn’t work, double-check: (1) PostgreSQL is running, (2) `DATABASE_URL` in `.env` is correct, (3) you ran `prisma db push` and `prisma db seed` after setting `DATABASE_URL`.
+If something doesn’t work, double-check: (1) PostgreSQL is running, (2) `DATABASE_URL` in `.env` is correct, (3) you ran `prisma migrate deploy` and `prisma db seed` after setting `DATABASE_URL`.

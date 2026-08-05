@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { createCarPart, updateCarPart } from '@/app/actions/inventory';
 import { getSuppliersForSelect } from '@/app/actions/suppliers';
+import { formError } from '@/lib/form-error';
 
 /** Serializable part fields for edit form (no Decimal/Date). */
 export type CarPartFormInitial = {
@@ -84,7 +85,7 @@ export function CarPartFormDialog({ trigger, part }: CarPartFormDialogProps) {
       setOpen(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(formError(err));
     } finally {
       setLoading(false);
     }

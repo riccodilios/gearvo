@@ -38,29 +38,23 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Today's Revenue"
-          value={formatCurrency(stats.todayRevenue)}
+          value={formatCurrency(stats.revenueToday)}
           icon={DollarSign}
         />
         <StatCard
           title="Monthly Revenue"
-          value={formatCurrency(stats.thisMonthRevenue)}
-          trend={{
-            value: stats.monthOverMonth,
-            label: 'vs last month',
-            positive: stats.monthOverMonth >= 0,
-          }}
+          value={formatCurrency(stats.revenueMonth)}
           icon={TrendingUp}
         />
         <StatCard
-          title="Total Profit"
-          value={formatCurrency(stats.totalProfit)}
+          title="Monthly Profit"
+          value={formatCurrency(stats.profitMonth)}
           description="From completed repairs"
           icon={DollarSign}
         />
         <StatCard
           title="Outstanding Balance"
-          value={formatCurrency(stats.outstandingBalance)}
-          description={stats.overdueCount > 0 ? `${stats.overdueCount} overdue` : undefined}
+          value={formatCurrency(stats.outstanding)}
           icon={AlertTriangle}
         />
       </div>
@@ -72,7 +66,7 @@ export default async function DashboardPage() {
             <Wrench className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeRepairs}</div>
+            <div className="text-2xl font-bold">{stats.openRepairs}</div>
             <Link
               href="/repair-orders"
               className="text-xs text-amber-500 hover:underline"
@@ -87,7 +81,7 @@ export default async function DashboardPage() {
             <Users className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+            <div className="text-2xl font-bold">{stats.customersCount}</div>
             <Link
               href="/customers"
               className="text-xs text-amber-500 hover:underline"
@@ -120,7 +114,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats.upcomingInstallments}
+              {formatCurrency(stats.upcomingInstallments)}
             </div>
             <p className="text-xs text-zinc-500">Next 30 days</p>
           </CardContent>
@@ -134,7 +128,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(stats.nextMonthForecast)}
+              {formatCurrency(stats.forecastNextMonth)}
             </div>
             <p className="text-xs text-zinc-500">Based on current trend</p>
           </CardContent>
@@ -165,7 +159,7 @@ export default async function DashboardPage() {
                   recentOrders.map((order) => (
                     <Link
                       key={order.id}
-                      href="/repair-orders"
+                      href={`/repair-orders/${order.id}`}
                       className="flex items-center justify-between rounded-lg border border-zinc-800 p-3 transition-colors hover:bg-zinc-800/50"
                     >
                       <div>

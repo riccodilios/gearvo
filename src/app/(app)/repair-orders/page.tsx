@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getRepairOrders } from '@/app/actions/repair-orders';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
@@ -28,7 +29,7 @@ export default async function RepairOrdersPage({
   const params = await searchParams;
   const status = params.status ?? 'all';
   const query = params.q?.toLowerCase() ?? '';
-  const orders = await getRepairOrders(status);
+  const { items: orders } = await getRepairOrders({ status });
   const filtered = query
     ? orders.filter(
         (o) =>
@@ -49,7 +50,7 @@ export default async function RepairOrdersPage({
           <RepairOrderFormDialog
             trigger={
               <Button>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 New Repair Order
               </Button>
             }
@@ -90,7 +91,12 @@ export default async function RepairOrdersPage({
                 {filtered.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">
-                      {order.orderNumber}
+                      <Link
+                        href={`/repair-orders/${order.id}`}
+                        className="text-amber-500 hover:underline"
+                      >
+                        {order.orderNumber}
+                      </Link>
                     </TableCell>
                     <TableCell>{order.customer.fullName}</TableCell>
                     <TableCell>

@@ -67,14 +67,14 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                  <Pencil className="mr-2 h-4 w-4" />
+                  <Pencil className="me-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-red-500"
                   onClick={() => setDeleteOpen(true)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createVehicle } from '@/app/actions/vehicles';
+import { formError } from '@/lib/form-error';
 import { Car } from 'lucide-react';
 
 const currentYear = new Date().getFullYear();
@@ -49,7 +50,7 @@ export function AddVehicleDialog({ customerId, trigger }: AddVehicleDialogProps)
       setOpen(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add vehicle');
+      setError(formError(err));
     } finally {
       setLoading(false);
     }

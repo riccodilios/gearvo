@@ -21,19 +21,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { recordPayment } from '@/app/actions/invoices';
+import { formError } from '@/lib/form-error';
 
 interface PaymentDialogProps {
   invoiceId: string;
   remainingBalance: number;
   trigger: React.ReactNode;
+  defaultOpen?: boolean;
 }
 
 export function PaymentDialog({
   invoiceId,
   remainingBalance,
   trigger,
+  defaultOpen = false,
 }: PaymentDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [method, setMethod] = useState('CASH');
@@ -55,7 +58,7 @@ export function PaymentDialog({
       setOpen(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(formError(err));
     } finally {
       setLoading(false);
     }

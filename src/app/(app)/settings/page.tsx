@@ -1,99 +1,132 @@
-import { currentUser } from '@clerk/nextjs/server';
+import { getActivity, getFeatures, getIntegrations, listBranches } from '@/app/actions/workspace';
+import { getTeamUsers } from '@/app/actions/users';
+import { getWorkspaceContext } from '@/server/auth';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getTeamUsers } from '@/app/actions/users';
-import { getTenant } from '@/lib/tenant';
-import { UserButton } from '@clerk/nextjs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { currentUser } from '@clerk/nextjs/server';
+import { formatDateTime } from '@/lib/utils';
+import { CompanySettingsForm } from '@/components/settings/CompanySettingsForm';
+import { FeatureFlagsPanel } from '@/components/settings/FeatureFlagsPanel';
+import { IntegrationsPanel } from '@/components/settings/IntegrationsPanel';
+import { BranchManager } from '@/components/settings/BranchManager';
 
 export default async function SettingsPage() {
-  const [users, tenant, user] = await Promise.all([
-    getTeamUsers(),
-    getTenant(),
-    currentUser().catch(() => null),
-  ]);
-  const displayName = user ? [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || 'Signed in' : null;
-  const email = user?.primaryEmailAddress?.emailAddress ?? null;
+  const ctx = await getWorkspaceContext();
+  const [team, features, integrations, branches, activity, clerkUser] =
+    await Promise.all([
+      getTeamUsers(),
+      getFeatures(),
+      getIntegrations(),
+      listBranches(),
+      getActivity({ take: 10 }),
+      currentUser().catch(() => null),
+    ]);
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Settings"
-        description="Manage your shop and account"
+        description="Workspace, branches, features, and integrations"
       />
 
-      {(user != null) && (
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Account</CardTitle>
-            <p className="text-sm text-zinc-400">Your login and profile</p>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <UserButton
-                afterSignOutUrl="/"
-                appearance={{ variables: { colorPrimary: '#f59e0b' } }}
-              />
-              <div>
-                <p className="font-medium text-zinc-200">{displayName}</p>
-                <p className="text-sm text-zinc-500">{email ?? '—'}</p>
-              </div>
-            </div>
-            <p className="text-xs text-zinc-500">Use the avatar to manage account or sign out.</p>
+          <CardContent className="space-y-2 text-sm">
+            {clerkUser ? (
+              <>
+                <p>
+                  <span className="text-zinc-500">Signed in as </span>
+                  {clerkUser.primaryEmailAddress?.emailAddress}
+                </p>
+                <p className="text-zinc-500">
+                  Role: {ctx?.role?.replace(/_/g, ' ') ?? '—'}
+                </p>
+              </>
+            ) : (
+              <p className="text-zinc-500">
+                Dev mode — Clerk not configured. Set ALLOW_DEV_AUTH_BYPASS=true
+                and seed the demo user.
+              </p>
+            )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Subscription</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Badge>{ctx?.company.plan ?? 'TRIAL'}</Badge>
+            <p className="text-sm text-zinc-500">
+              Manage billing via Stripe in the Integration Center when connected.
+            </p>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/settings#integrations">Open Integration Center</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {ctx && (
+        <>
+          <CompanySettingsForm
+            initial={{
+              name: ctx.company.name,
+              email: ctx.company.email ?? '',
+              phone: ctx.company.phone ?? '',
+              address: ctx.company.address ?? '',
+              commercialRegNumber: ctx.company.commercialRegNumber ?? '',
+              vatNumber: ctx.company.vatNumber ?? '',
+              currency: ctx.company.currency,
+              locale: ctx.company.locale,
+            }}
+          />
+
+          <BranchManager
+            companyId={ctx.company.id}
+            branches={branches.map((b) => ({
+              id: b.id,
+              name: b.name,
+              slug: b.slug,
+              isDefault: b.isDefault,
+              isArchived: b.isArchived,
+              address: b.address,
+            }))}
+          />
+        </>
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle>Shop</CardTitle>
-          <p className="text-sm text-zinc-400">Your workspace name and URL slug</p>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Team</CardTitle>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/employees">Manage employees</Link>
+          </Button>
         </CardHeader>
         <CardContent>
-          {tenant ? (
-            <dl className="space-y-2">
-              <div>
-                <dt className="text-xs font-medium text-zinc-500">Shop name</dt>
-                <dd className="mt-0.5 font-medium text-zinc-200">{tenant.name}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-zinc-500">URL slug</dt>
-                <dd className="mt-0.5 font-mono text-sm text-zinc-300">{tenant.slug}</dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="text-sm text-zinc-500">No shop selected. Create a shop from the welcome flow.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Team (users)</CardTitle>
-          <p className="text-sm text-zinc-400">People who can access this shop</p>
-        </CardHeader>
-        <CardContent>
-          {users.length === 0 ? (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
-              <p className="text-sm text-zinc-400">
-                No team members yet. Connect Clerk for authentication to sign in and invite users.
-              </p>
-              <p className="mt-2 text-xs text-zinc-500">
-                Add <code className="rounded bg-zinc-800 px-1">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> and{' '}
-                <code className="rounded bg-zinc-800 px-1">CLERK_SECRET_KEY</code> to your .env, then add sign-in/sign-up to your app. Users will appear here once they join your tenant.
-              </p>
-            </div>
+          {team.length === 0 ? (
+            <p className="text-sm text-zinc-500">No team members yet.</p>
           ) : (
             <ul className="space-y-2">
-              {users.map((u) => (
+              {team.map((m) => (
                 <li
-                  key={u.id}
-                  className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-900/50 px-3 py-2"
+                  key={m.id}
+                  className="flex items-center justify-between rounded-lg border border-zinc-800 px-3 py-2 text-sm"
                 >
-                  <span className="font-medium text-zinc-200">{u.fullName}</span>
-                  <span className="text-sm text-zinc-500">{u.email}</span>
-                  <span className="rounded bg-zinc-700 px-2 py-0.5 text-xs text-zinc-300">
-                    {u.role}
+                  <span>
+                    {m.user.fullName}{' '}
+                    <span className="text-zinc-500">({m.user.email})</span>
                   </span>
+                  <Badge variant="secondary">
+                    {m.role.replace(/_/g, ' ')}
+                    {m.branch ? ` · ${m.branch.name}` : ' · All branches'}
+                  </Badge>
                 </li>
               ))}
             </ul>
@@ -101,42 +134,45 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>General</CardTitle>
-          <p className="text-sm text-zinc-400">Shop preferences</p>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-zinc-500">
-            More shop settings (address, logo, etc.) will be configurable here. Connect Stripe for payments to unlock subscription management.
-          </p>
-        </CardContent>
-      </Card>
+      <FeatureFlagsPanel
+        features={features.map((f) => ({
+          feature: f.feature,
+          enabled: f.enabled,
+        }))}
+      />
+
+      <IntegrationsPanel
+        integrations={integrations.map((i) => ({
+          provider: i.provider,
+          status: i.status,
+          name: i.definition.name,
+          description: i.definition.description,
+          category: i.definition.category,
+        }))}
+      />
 
       <Card>
-        <CardHeader>
-          <CardTitle>Subscription</CardTitle>
-          <p className="text-sm text-zinc-400">Manage your SaaS plan</p>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Recent activity</CardTitle>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/activity">View all</Link>
+          </Button>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-zinc-500">
-            Plans: Free Trial, Basic, Pro, Enterprise. Connect Stripe to enable
-            subscription management.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Integrations</CardTitle>
-          <p className="text-sm text-zinc-400">Third-party services</p>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-inside list-disc space-y-1 text-sm text-zinc-500">
-            <li>Clerk - Authentication</li>
-            <li>Stripe - Payments & Subscriptions</li>
-            <li>Cloudinary / S3 - Receipt storage</li>
-          </ul>
+          {activity.length === 0 ? (
+            <p className="text-sm text-zinc-500">No activity yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {activity.map((a) => (
+                <li key={a.id} className="border-b border-zinc-800 pb-2 text-sm last:border-0">
+                  <p>{a.summary}</p>
+                  <p className="text-xs text-zinc-500">
+                    {a.user?.fullName ?? 'System'} · {formatDateTime(a.createdAt)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -5,25 +5,29 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number | string): string {
+export function formatCurrency(
+  amount: number | string,
+  currency = 'SAR',
+  locale = 'en-SA'
+): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'USD',
+    currency,
     minimumFractionDigits: 2,
-  }).format(num);
+  }).format(Number.isFinite(num) ? num : 0);
 }
 
-export function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat('en-US', {
+export function formatDate(date: Date | string, locale = 'en-SA'): string {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(date));
 }
 
-export function formatDateTime(date: Date | string): string {
-  return new Intl.DateTimeFormat('en-US', {
+export function formatDateTime(date: Date | string, locale = 'en-SA'): string {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

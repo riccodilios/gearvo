@@ -27,35 +27,38 @@
 
 ## 2. Environment Variables
 
-Add these to your Vercel project (Settings → Environment Variables):
+Add these to your Vercel/Netlify project:
 
 ```
 DATABASE_URL=postgresql://...
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+CLERK_WEBHOOK_SECRET=whsec_...
 ```
 
-Optional for full functionality:
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` - Auth
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_SECRET_KEY` - Payments
+**Required in production:** Clerk keys. Without them the app fails closed (503 on private routes).
+
+Never set `ALLOW_DEV_AUTH_BYPASS=true` in production.
+
+Optional:
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` — SaaS billing (Integration Center)
+- `INTEGRATION_SECRETS_KEY` — encrypt integration credentials at rest
 
 ## 3. Database Migration
-
-Run locally before deploying:
 
 ```bash
 npm install
 npx prisma generate
-npx prisma db push   # or prisma migrate deploy for production
-npx prisma db seed
+npx prisma migrate deploy
+npx prisma db seed   # optional demo company
 ```
 
-For production, add a build script or use Vercel's build command:
+Do **not** use `prisma db push` against production. Netlify build already runs `migrate deploy` (see `netlify.toml`).
 
-```json
-{
-  "scripts": {
-    "build": "prisma generate && next build"
-  }
-}
+Build command:
+
+```bash
+npx prisma generate && npx prisma migrate deploy && next build
 ```
 
 ## 4. Deploy to Vercel

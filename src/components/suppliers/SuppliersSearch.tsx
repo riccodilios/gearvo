@@ -33,7 +33,7 @@ export function SuppliersSearch() {
         placeholder="Search by name or contact person..."
         defaultValue={searchParams.get('q') ?? ''}
         onChange={handleSearch}
-        className="pl-9"
+        className="ps-9"
       />
     </div>
   );

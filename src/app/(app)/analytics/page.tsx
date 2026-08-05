@@ -4,7 +4,10 @@ import {
   getDailyRevenue,
   getPaymentMethodsStats,
   getRevenueByCategory,
+  getBranchComparison,
 } from '@/app/actions/dashboard';
+import { gatePage } from '@/server/page-gate';
+import { FeatureModule } from '@prisma/client';
 import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,13 +19,15 @@ import { PaymentMethodsChart } from '@/components/analytics/PaymentMethodsChart'
 import { RevenueByCategoryChart } from '@/components/analytics/RevenueByCategoryChart';
 
 export default async function AnalyticsPage() {
-  const [stats, revenueTrend, dailyRevenue, paymentMethods, revenueByCategory] =
+  await gatePage('analytics:read', FeatureModule.ANALYTICS);
+  const [stats, revenueTrend, dailyRevenue, paymentMethods, revenueByCategory, branchCompare] =
     await Promise.all([
       getDashboardStats(),
       getRevenueTrend(12),
       getDailyRevenue(),
       getPaymentMethodsStats(),
       getRevenueByCategory(),
+      getBranchComparison(),
     ]);
 
   return (
@@ -35,27 +40,22 @@ export default async function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="This Month Revenue"
-          value={formatCurrency(stats.thisMonthRevenue)}
-          trend={{
-            value: stats.monthOverMonth,
-            label: 'vs last month',
-            positive: stats.monthOverMonth >= 0,
-          }}
+          value={formatCurrency(stats.revenueMonth)}
           icon={DollarSign}
         />
         <StatCard
-          title="Total Profit"
-          value={formatCurrency(stats.totalProfit)}
+          title="Monthly Profit"
+          value={formatCurrency(stats.profitMonth)}
           icon={TrendingUp}
         />
         <StatCard
           title="Outstanding Balance"
-          value={formatCurrency(stats.outstandingBalance)}
+          value={formatCurrency(stats.outstanding)}
           icon={BarChart3}
         />
         <StatCard
           title="Next Month Forecast"
-          value={formatCurrency(stats.nextMonthForecast)}
+          value={formatCurrency(stats.forecastNextMonth)}
           icon={TrendingUp}
         />
       </div>
@@ -79,7 +79,9 @@ export default async function AnalyticsPage() {
             <p className="text-sm text-zinc-400">Current month</p>
           </CardHeader>
           <CardContent>
-            <DailyRevenueChart data={dailyRevenue} />
+            <DailyRevenueChart
+              data={dailyRevenue.map((d) => ({ day: d.date, revenue: d.revenue }))}
+            />
           </CardContent>
         </Card>
         <Card>
@@ -88,7 +90,12 @@ export default async function AnalyticsPage() {
             <p className="text-sm text-zinc-400">Revenue by payment type</p>
           </CardHeader>
           <CardContent>
-            <PaymentMethodsChart data={paymentMethods} />
+            <PaymentMethodsChart
+              data={paymentMethods.map((p) => ({
+                name: p.method,
+                value: p.amount,
+              }))}
+            />
           </CardContent>
         </Card>
       </div>
@@ -99,7 +106,12 @@ export default async function AnalyticsPage() {
           <p className="text-sm text-zinc-400">Retail revenue from repair orders</p>
         </CardHeader>
         <CardContent>
-          <RevenueByCategoryChart data={revenueByCategory} />
+          <RevenueByCategoryChart
+            data={revenueByCategory.map((c) => ({
+              name: c.category,
+              value: c.amount,
+            }))}
+          />
         </CardContent>
       </Card>
 
@@ -131,6 +143,39 @@ export default async function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {branchCompare.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Branch comparison (this month)</CardTitle>
+            <p className="text-sm text-zinc-400">Company-wide view</p>
+          </CardHeader>
+          <CardContent>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800">
+                  <th className="py-3 text-left">Branch</th>
+                  <th className="py-3 text-right">Revenue</th>
+                  <th className="py-3 text-right">Repairs</th>
+                  <th className="py-3 text-right">Customers</th>
+                </tr>
+              </thead>
+              <tbody>
+                {branchCompare.map((b) => (
+                  <tr key={b.branchId} className="border-b border-zinc-800/50">
+                    <td className="py-3">{b.branchName}</td>
+                    <td className="py-3 text-right text-emerald-500">
+                      {formatCurrency(b.revenue)}
+                    </td>
+                    <td className="py-3 text-right">{b.repairs}</td>
+                    <td className="py-3 text-right">{b.customers}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

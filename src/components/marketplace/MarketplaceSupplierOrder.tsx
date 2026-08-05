@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createPurchaseOrder } from '@/app/actions/marketplace';
+import { formError } from '@/lib/form-error';
 import { formatCurrency } from '@/lib/utils';
 import { ShoppingCart } from 'lucide-react';
 
@@ -56,7 +57,7 @@ export function MarketplaceSupplierOrder({ supplier }: { supplier: Supplier }) {
       });
       setQuantities({});
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(formError(err));
     } finally {
       setLoading(false);
     }
@@ -113,7 +114,7 @@ export function MarketplaceSupplierOrder({ supplier }: { supplier: Supplier }) {
             disabled={loading || lines.length === 0}
             className="w-full"
           >
-            <ShoppingCart className="mr-2 h-4 w-4" />
+            <ShoppingCart className="me-2 h-4 w-4" />
             {loading ? 'Placing order...' : `Place order (${lines.length} lines)`}
           </Button>
         </form>

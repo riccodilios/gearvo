@@ -24,6 +24,7 @@ import { createRepairOrder } from '@/app/actions/repair-orders';
 import { getCustomersForSelect } from '@/app/actions/customers';
 import { getVehiclesForSelect } from '@/app/actions/vehicles';
 import { getCarPartsForSelect } from '@/app/actions/inventory';
+import { formError } from '@/lib/form-error';
 import { Plus, Trash2 } from 'lucide-react';
 
 type CustomerSelect = { id: string; fullName: string };
@@ -122,7 +123,7 @@ export function RepairOrderFormDialog({ trigger }: RepairOrderFormDialogProps) {
       setOpen(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(formError(err));
     } finally {
       setLoading(false);
     }

@@ -1,0 +1,103 @@
+'use client';
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
+import { getDictionary, type Locale } from '@/i18n/dictionaries';
+
+type I18nContextValue = {
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  t: ReturnType<typeof getDictionary>;
+  dir: 'ltr' | 'rtl';
+};
+
+const I18nContext = createContext<I18nContextValue | null>(null);
+const listeners = new Set<() => void>();
+
+function detectDefaultLocale(): Locale {
+  if (typeof window === 'undefined') return 'en';
+  const saved = window.localStorage.getItem('gearvo-locale');
+  if (saved === 'ar' || saved === 'en') return saved;
+  const nav = window.navigator.language?.toLowerCase() ?? '';
+  return nav.startsWith('ar') ? 'ar' : 'en';
+}
+
+function getStoredLocale(): Locale {
+  return detectDefaultLocale();
+}
+
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+}
+
+function emit() {
+  listeners.forEach((l) => l());
+}
+
+function applyDocumentLocale(locale: Locale) {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = locale;
+  document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.classList.toggle('locale-ar', locale === 'ar');
+}
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const locale = useSyncExternalStore(subscribe, getStoredLocale, () => 'en' as Locale);
+
+  useEffect(() => {
+    applyDocumentLocale(locale);
+  }, [locale]);
+
+  const setLocale = (l: Locale) => {
+    window.localStorage.setItem('gearvo-locale', l);
+    applyDocumentLocale(l);
+    emit();
+  };
+
+  return (
+    <I18nContext.Provider
+      value={{
+        locale,
+        setLocale,
+        t: getDictionary(locale),
+        dir: locale === 'ar' ? 'rtl' : 'ltr',
+      }}
+    >
+      {children}
+    </I18nContext.Provider>
+  );
+}
+
+export function useI18n() {
+  const ctx = useContext(I18nContext);
+  if (!ctx) throw new Error('useI18n must be used within I18nProvider');
+  return ctx;
+}
+
+export function LanguageSwitcher() {
+  const { locale, setLocale } = useI18n();
+  return (
+    <div className="flex gap-1 rounded-lg border border-zinc-700 p-1 text-xs" role="group" aria-label="Language">
+      <button
+        type="button"
+        className={`rounded px-2 py-1 ${locale === 'en' ? 'bg-amber-600 text-white' : 'text-zinc-400'}`}
+        onClick={() => setLocale('en')}
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        className={`rounded px-2 py-1 ${locale === 'ar' ? 'bg-amber-600 text-white' : 'text-zinc-400'}`}
+        onClick={() => setLocale('ar')}
+      >
+        ع
+      </button>
+    </div>
+  );
+}

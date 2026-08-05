@@ -2,7 +2,7 @@ export default function AppLoading() {
   return (
     <div className="min-h-screen bg-zinc-950">
       <div className="fixed inset-y-0 left-0 z-40 w-64 border-r border-zinc-800 bg-zinc-950" />
-      <main className="lg:pl-64">
+      <main className="lg:ps-64">
         <div className="p-4 pt-14 lg:pt-8 lg:p-8">
           <div className="animate-pulse space-y-6">
             <div className="h-8 w-48 rounded bg-zinc-800" />

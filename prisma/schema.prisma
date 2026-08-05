@@ -1,5 +1,5 @@
-// Gearvo - Mechanic Shop SaaS Platform
-// Multi-Tenant PostgreSQL Schema
+// Gearvo - Automotive Business Operating System
+// Multi-tenant: Platform → Company → Branch → Users
 // https://pris.ly/d/prisma-schema
 
 generator client {
@@ -11,24 +11,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============ TENANT & AUTH ============
+// ============ PLATFORM / COMPANY / BRANCH ============
 
-model Tenant {
-  id          String   @id @default(cuid())
-  name        String   // Shop name
-  slug        String   @unique
-  email       String?
-  phone       String?
-  address     String?
-  logoUrl     String?
-  plan        Plan     @default(TRIAL)
-  stripeCustomerId   String?
+model Company {
+  id                   String    @id @default(cuid())
+  name                 String
+  slug                 String    @unique
+  email                String?
+  phone                String?
+  address              String?
+  logoUrl              String?
+  commercialRegNumber  String? // Saudi CR
+  vatNumber            String?
+  currency             String    @default("SAR")
+  locale               String    @default("en")
+  timezone             String    @default("Asia/Riyadh")
+  plan                 Plan      @default(TRIAL)
+  status               CompanyStatus @default(ACTIVE)
+  stripeCustomerId     String?
   stripeSubscriptionId String?
-  trialEndsAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  trialEndsAt          DateTime?
+  suspendedAt          DateTime?
+  deletedAt            DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  users          User[]
+  branches       Branch[]
+  memberships    Membership[]
   customers      Customer[]
   vehicles       Vehicle[]
   suppliers      Supplier[]
@@ -39,6 +48,11 @@ model Tenant {
   installments   Installment[]
   purchaseOrders PurchaseOrder[]
   analyticsEvents AnalyticsEvent[]
+  activityLogs   ActivityLog[]
+  featureFlags   CompanyFeatureFlag[]
+  integrations   CompanyIntegration[]
+  sequences      DocumentSequence[]
+  expenses       Expense[]
 }
 
 enum Plan {
@@ -48,51 +62,227 @@ enum Plan {
   ENTERPRISE
 }
 
+enum CompanyStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+model Branch {
+  id        String    @id @default(cuid())
+  companyId String
+  name      String
+  slug      String
+  phone     String?
+  address   String?
+  isDefault Boolean   @default(false)
+  isArchived Boolean  @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  memberships    Membership[]
+  customers      Customer[]
+  vehicles       Vehicle[]
+  suppliers      Supplier[]
+  carParts       CarPart[]
+  repairOrders   RepairOrder[]
+  invoices       Invoice[]
+  payments       Payment[]
+  installments   Installment[]
+  purchaseOrders PurchaseOrder[]
+  expenses       Expense[]
+
+  @@unique([companyId, slug])
+  @@index([companyId])
+}
+
 model User {
   id            String   @id @default(cuid())
   clerkId       String   @unique
   email         String
   fullName      String
   avatarUrl     String?
-  tenantId      String
-  role          Role     @default(EMPLOYEE)
+  isPlatformAdmin Boolean @default(false)
+  preferredLocale String @default("en")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberships  Membership[]
+  activityLogs ActivityLog[]
 }
 
-enum Role {
-  OWNER
-  MANAGER
+enum AppRole {
+  PLATFORM_OWNER
+  PLATFORM_ADMIN
+  COMPANY_OWNER
+  COMPANY_ADMIN
+  BRANCH_MANAGER
+  SERVICE_ADVISOR
+  TECHNICIAN
+  CASHIER
+  INVENTORY_MANAGER
+  ACCOUNTANT
+  RECEPTIONIST
   EMPLOYEE
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  branchId  String? // null = company-wide (Owner/Admin)
+  role      AppRole  @default(EMPLOYEE)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch  Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId, branchId])
+  @@index([companyId])
+  @@index([userId])
+}
+
+// ============ FEATURE FLAGS & INTEGRATIONS ============
+
+enum FeatureModule {
+  CRM
+  INVENTORY
+  MARKETPLACE
+  INSTALLMENTS
+  ACCOUNTING
+  ANALYTICS
+  EMPLOYEES
+  AI
+  WHATSAPP
+  REPORTS
+  APPOINTMENTS
+  EXPENSES
+}
+
+model CompanyFeatureFlag {
+  id        String        @id @default(cuid())
+  companyId String
+  feature   FeatureModule
+  enabled   Boolean       @default(true)
+  config    Json?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, feature])
+  @@index([companyId])
+}
+
+enum IntegrationProvider {
+  STRIPE
+  WHATSAPP
+  EMAIL
+  SMS
+  GOOGLE_CALENDAR
+  OUTLOOK_CALENDAR
+  ACCOUNTING
+  ZATCA
+}
+
+enum IntegrationStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+  PENDING
+}
+
+model CompanyIntegration {
+  id           String              @id @default(cuid())
+  companyId    String
+  provider     IntegrationProvider
+  status       IntegrationStatus   @default(DISCONNECTED)
+  config       Json? // non-secret settings
+  secretsEnc   String? // encrypted credentials (never expose to client)
+  lastSyncAt   DateTime?
+  lastError    String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, provider])
+  @@index([companyId])
+}
+
+// ============ AUDIT / ACTIVITY ============
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  companyId  String
+  branchId   String?
+  userId     String?
+  action     String // customer.created, invoice.paid, etc.
+  entityType String
+  entityId   String?
+  summary    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+  @@index([companyId, entityType, entityId])
+}
+
+model DocumentSequence {
+  id        String @id @default(cuid())
+  companyId String
+  branchId  String?
+  type      String // INV, RO, PO
+  year      Int
+  lastValue Int    @default(0)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, branchId, type, year])
 }
 
 // ============ CUSTOMER CRM ============
 
 model Customer {
-  id                 String   @id @default(cuid())
-  tenantId           String
+  id                 String    @id @default(cuid())
+  companyId          String
+  branchId           String
   fullName           String
   phone              String?
   email              String?
   address            String?
-  tags               String[] // VIP, Late payer, Frequent buyer, etc.
+  tags               String[]
   notes              String?
-  totalSpent         Decimal  @default(0) @db.Decimal(12, 2)
-  outstandingBalance Decimal  @default(0) @db.Decimal(12, 2)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  totalSpent         Decimal   @default(0) @db.Decimal(12, 2)
+  outstandingBalance Decimal   @default(0) @db.Decimal(12, 2)
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicles   Vehicle[]
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  vehicles     Vehicle[]
   repairOrders RepairOrder[]
-  invoices   Invoice[]
+  invoices     Invoice[]
+  payments     Payment[]
+  installments Installment[]
+
+  @@index([companyId, branchId, createdAt])
+  @@index([companyId, fullName])
 }
 
 model Vehicle {
-  id           String   @id @default(cuid())
-  tenantId     String
+  id           String    @id @default(cuid())
+  companyId    String
+  branchId     String
   customerId   String
   make         String
   model        String
@@ -101,77 +291,100 @@ model Vehicle {
   vin          String?
   color        String?
   mileage      Int?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
   customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   repairOrders RepairOrder[]
+
+  @@index([companyId, branchId])
+  @@index([customerId])
 }
 
 // ============ SUPPLIERS & INVENTORY ============
 
 model Supplier {
-  id            String   @id @default(cuid())
-  tenantId      String
+  id            String    @id @default(cuid())
+  companyId     String
+  branchId      String
   name          String
   contactPerson String?
   phone         String?
   email         String?
   address       String?
   notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch          Branch          @relation(fields: [branchId], references: [id], onDelete: Cascade)
   carParts        CarPart[]
   purchaseOrders  PurchaseOrder[]
+
+  @@index([companyId, branchId])
 }
 
 model CarPart {
-  id             String   @id @default(cuid())
-  tenantId       String
+  id             String    @id @default(cuid())
+  companyId      String
+  branchId       String
   supplierId     String?
   name           String
   partNumber     String?
-  costPrice      Decimal  @db.Decimal(12, 2)
-  retailPrice    Decimal  @db.Decimal(12, 2)
-  stockQuantity  Int      @default(0)
-  minStockLevel  Int      @default(5)
+  costPrice      Decimal   @db.Decimal(12, 2)
+  retailPrice    Decimal   @db.Decimal(12, 2)
+  stockQuantity  Int       @default(0)
+  minStockLevel  Int       @default(5)
   category       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  supplier          Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  partUsages        RepairOrderPart[]
+  company            Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch             Branch               @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  supplier           Supplier?            @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  partUsages         RepairOrderPart[]
   purchaseOrderLines PurchaseOrderLine[]
+
+  @@index([companyId, branchId])
+  @@index([companyId, name])
 }
 
 // ============ REPAIR ORDERS ============
 
 model RepairOrder {
-  id                String   @id @default(cuid())
-  tenantId          String
-  customerId        String
-  vehicleId         String
-  orderNumber       String
-  description       String?
-  status            RepairOrderStatus @default(PENDING)
-  laborCost         Decimal  @default(0) @db.Decimal(12, 2)
-  partsCostTotal    Decimal  @default(0) @db.Decimal(12, 2)
-  partsRetailTotal  Decimal  @default(0) @db.Decimal(12, 2)
-  totalPrice        Decimal  @default(0) @db.Decimal(12, 2)
-  profit            Decimal  @default(0) @db.Decimal(12, 2)
-  notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String            @id @default(cuid())
+  companyId        String
+  branchId         String
+  customerId       String
+  vehicleId        String
+  orderNumber      String
+  description      String?
+  status           RepairOrderStatus @default(PENDING)
+  laborCost        Decimal           @default(0) @db.Decimal(12, 2)
+  partsCostTotal   Decimal           @default(0) @db.Decimal(12, 2)
+  partsRetailTotal Decimal           @default(0) @db.Decimal(12, 2)
+  totalPrice       Decimal           @default(0) @db.Decimal(12, 2)
+  profit           Decimal           @default(0) @db.Decimal(12, 2)
+  notes            String?
+  deletedAt        DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  company  Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch   Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  customer Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle  Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
   parts    RepairOrderPart[]
   invoice  Invoice?
+
+  @@unique([companyId, orderNumber])
+  @@index([companyId, branchId, createdAt])
+  @@index([companyId, status])
 }
 
 enum RepairOrderStatus {
@@ -184,13 +397,13 @@ enum RepairOrderStatus {
 }
 
 model RepairOrderPart {
-  id             String   @id @default(cuid())
-  repairOrderId  String
-  carPartId      String
-  quantity       Int
-  costPrice      Decimal  @db.Decimal(12, 2)
-  retailPrice    Decimal  @db.Decimal(12, 2)
-  createdAt      DateTime @default(now())
+  id            String  @id @default(cuid())
+  repairOrderId String
+  carPartId     String
+  quantity      Int
+  costPrice     Decimal @db.Decimal(12, 2)
+  retailPrice   Decimal @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
 
   repairOrder RepairOrder @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
   carPart     CarPart     @relation(fields: [carPartId], references: [id], onDelete: Restrict)
@@ -201,26 +414,36 @@ model RepairOrderPart {
 // ============ INVOICES & PAYMENTS ============
 
 model Invoice {
-  id               String   @id @default(cuid())
-  tenantId         String
-  repairOrderId    String?  @unique
+  id               String        @id @default(cuid())
+  companyId        String
+  branchId         String
+  repairOrderId    String?       @unique
   customerId       String
   invoiceNumber    String
-  totalAmount      Decimal  @db.Decimal(12, 2)
-  paidAmount       Decimal  @default(0) @db.Decimal(12, 2)
-  remainingBalance Decimal  @default(0) @db.Decimal(12, 2)
+  totalAmount      Decimal       @db.Decimal(12, 2)
+  paidAmount       Decimal       @default(0) @db.Decimal(12, 2)
+  remainingBalance Decimal       @default(0) @db.Decimal(12, 2)
+  taxAmount        Decimal       @default(0) @db.Decimal(12, 2)
+  discountAmount   Decimal       @default(0) @db.Decimal(12, 2)
   status           InvoiceStatus @default(UNPAID)
   dueDate          DateTime?
   notes            String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  deletedAt        DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
-  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  repairOrder  RepairOrder? @relation(fields: [repairOrderId], references: [id], onDelete: SetNull)
-  customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  repairOrder  RepairOrder?  @relation(fields: [repairOrderId], references: [id], onDelete: SetNull)
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
   items        InvoiceItem[]
   payments     Payment[]
   installments Installment[]
+  receipts     Receipt[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, branchId, createdAt])
+  @@index([companyId, status])
 }
 
 enum InvoiceStatus {
@@ -243,19 +466,25 @@ model InvoiceItem {
 }
 
 model Payment {
-  id          String   @id @default(cuid())
-  tenantId    String
-  invoiceId   String
-  customerId  String
-  amount      Decimal  @db.Decimal(12, 2)
-  method      PaymentMethod
-  paymentDate DateTime @default(now())
-  notes       String?
+  id              String        @id @default(cuid())
+  companyId       String
+  branchId        String
+  invoiceId       String
+  customerId      String
+  amount          Decimal       @db.Decimal(12, 2)
+  method          PaymentMethod
+  paymentDate     DateTime      @default(now())
+  notes           String?
   stripePaymentId String?
-  createdAt   DateTime @default(now())
+  createdAt       DateTime      @default(now())
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  invoice  Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  receipts Receipt[]
+
+  @@index([companyId, branchId, paymentDate])
 }
 
 enum PaymentMethod {
@@ -268,20 +497,26 @@ enum PaymentMethod {
 }
 
 model Installment {
-  id          String   @id @default(cuid())
-  tenantId    String
-  invoiceId   String
-  customerId  String
-  amount      Decimal  @db.Decimal(12, 2)
-  dueDate     DateTime
-  status      InstallmentStatus @default(PENDING)
-  paidDate    DateTime?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String            @id @default(cuid())
+  companyId  String
+  branchId   String
+  invoiceId  String
+  customerId String
+  amount     Decimal           @db.Decimal(12, 2)
+  dueDate    DateTime
+  status     InstallmentStatus @default(PENDING)
+  paidDate   DateTime?
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  invoice  Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, branchId, dueDate])
+  @@index([companyId, status])
 }
 
 enum InstallmentStatus {
@@ -293,26 +528,31 @@ enum InstallmentStatus {
 // ============ MARKETPLACE / PART ORDERS ============
 
 model PurchaseOrder {
-  id         String   @id @default(cuid())
-  tenantId   String
-  supplierId String
-  orderNumber String  // e.g. PO-2024-001
-  status     PurchaseOrderStatus @default(PENDING)
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String              @id @default(cuid())
+  companyId   String
+  branchId    String
+  supplierId  String
+  orderNumber String
+  status      PurchaseOrderStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  company  Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch   Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   lines    PurchaseOrderLine[]
+
+  @@unique([companyId, orderNumber])
+  @@index([companyId, branchId])
 }
 
 model PurchaseOrderLine {
-  id              String   @id @default(cuid())
+  id              String  @id @default(cuid())
   purchaseOrderId String
   carPartId       String
   quantity        Int
-  unitCost        Decimal  @db.Decimal(12, 2)
+  unitCost        Decimal @db.Decimal(12, 2)
   createdAt       DateTime @default(now())
 
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
@@ -320,27 +560,54 @@ model PurchaseOrderLine {
 }
 
 enum PurchaseOrderStatus {
-  PENDING   // Draft / not sent
-  ORDERED   // Sent to supplier
-  RECEIVED  // Received, stock updated
+  PENDING
+  ORDERED
+  RECEIVED
+}
+
+// ============ EXPENSES ============
+
+model Expense {
+  id          String   @id @default(cuid())
+  companyId   String
+  branchId    String
+  category    String
+  description String?
+  amount      Decimal  @db.Decimal(12, 2)
+  expenseDate DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branch  Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, branchId, expenseDate])
 }
 
 // ============ RECEIPTS & ANALYTICS ============
 
 model Receipt {
-  id          String   @id @default(cuid())
-  invoiceId   String
-  paymentId   String
-  url         String   // S3/Cloudinary URL
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  companyId  String
+  invoiceId  String
+  paymentId  String
+  url        String
+  createdAt  DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
 }
 
 model AnalyticsEvent {
   id        String   @id @default(cuid())
-  tenantId  String
-  eventType String   // revenue, payment, repair_completed, etc.
+  companyId String
+  eventType String
   payload   Json
   createdAt DateTime @default(now())
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, createdAt])
 }

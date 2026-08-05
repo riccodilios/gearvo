@@ -43,7 +43,7 @@ export function InventorySearchFilter({
           placeholder="Search by part name or number..."
           defaultValue={q}
           onChange={(e) => handleSearch(e.target.value)}
-          className="pl-9"
+          className="ps-9"
         />
       </div>
       <Select value={category} onValueChange={handleCategoryChange}>

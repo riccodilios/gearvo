@@ -25,7 +25,7 @@ export default async function InvoicesPage({
   const params = await searchParams;
   const status = params.status ?? 'all';
   const query = params.q?.toLowerCase() ?? '';
-  const invoices = await getInvoices(status);
+  const { items: invoices } = await getInvoices({ status });
   const filtered = query
     ? invoices.filter(
         (inv) =>
@@ -99,7 +99,7 @@ export default async function InvoicesPage({
                       </Link>
                       {inv.status !== 'PAID' && (
                         <Link
-                          href={`/invoices/${inv.id}#pay`}
+                          href={`/invoices/${inv.id}?pay=1`}
                           className="text-emerald-500 hover:underline"
                         >
                           Pay

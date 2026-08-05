@@ -1,20 +1,39 @@
 import Layout from '@/components/layout/Layout';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { DemoBanner } from '@/components/DemoBanner';
-import { getTenantId, getTenant } from '@/lib/tenant';
+import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
+import { getWorkspaceContext, getNavAccess } from '@/server/auth';
+import { listBranches } from '@/app/actions/workspace';
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [tenantId, tenant] = await Promise.all([getTenantId(), getTenant()]);
+  const [ctx, nav] = await Promise.all([getWorkspaceContext(), getNavAccess()]);
+  const branches = ctx ? await listBranches() : [];
 
   return (
     <>
-      {!tenantId && <DemoBanner />}
-      <Layout shopName={tenant?.name ?? null}>
-        <AppHeader shopName={tenant?.name ?? null} />
+      {!ctx && <DemoBanner />}
+      <Layout
+        shopName={ctx?.company.name ?? null}
+        permissions={nav?.permissions}
+        features={nav?.features}
+        isPlatformAdmin={nav?.isPlatformAdmin}
+      >
+        <AppHeader shopName={ctx?.company.name ?? null}>
+          {ctx && (
+            <WorkspaceSwitcher
+              companyId={ctx.company.id}
+              companyName={ctx.company.name}
+              currentBranchId={ctx.branch.id}
+              branches={branches
+                .filter((b) => !b.isArchived)
+                .map((b) => ({ id: b.id, name: b.name }))}
+            />
+          )}
+        </AppHeader>
         <div className="flex-1 p-4 pt-4 lg:p-8">{children}</div>
       </Layout>
     </>

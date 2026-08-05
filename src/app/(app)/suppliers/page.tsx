@@ -22,17 +22,9 @@ export default async function SuppliersPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const params = await searchParams;
-  const suppliers = await getSuppliers();
-  const query = params.q?.toLowerCase() ?? '';
-  const filtered = query
-    ? suppliers.filter(
-        (s) =>
-          s.name.toLowerCase().includes(query) ||
-          s.contactPerson?.toLowerCase().includes(query) ||
-          s.email?.toLowerCase().includes(query) ||
-          s.phone?.includes(query)
-      )
-    : suppliers;
+  const query = params.q ?? '';
+  const { items: suppliers } = await getSuppliers({ q: query });
+  const filtered = suppliers;
 
   return (
     <div className="space-y-8">
@@ -43,7 +35,7 @@ export default async function SuppliersPage({
           <SupplierFormDialog
             trigger={
               <Button>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 Add Supplier
               </Button>
             }

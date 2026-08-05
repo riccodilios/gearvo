@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createCustomer, updateCustomer } from '@/app/actions/customers';
+import { formError } from '@/lib/form-error';
 
 /** Serializable customer fields for edit form (no Decimal/Date). */
 export type CustomerFormInitial = {
@@ -65,7 +66,7 @@ export function CustomerFormDialog({ trigger, customer }: CustomerFormDialogProp
       setOpen(false);
       router.refresh();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      const msg = formError(err);
       if (msg.includes('Database is not connected')) {
         setError('setup');
       } else {

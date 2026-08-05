@@ -1,77 +1,137 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { getTenantId, requireTenantId } from '@/lib/tenant';
+import { requirePermission, branchScope, getWorkspaceContext, accessibleWhere } from '@/server/auth';
+import { logActivity } from '@/server/audit';
 import { supplierSchema, type SupplierInput } from '@/lib/validations';
 import { revalidatePath } from 'next/cache';
 
-export async function getSuppliers() {
-  const tenantId = await getTenantId();
-  if (!tenantId) return [];
+export async function getSuppliersForSelect() {
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return [];
   return prisma.supplier.findMany({
-    where: { tenantId },
-    orderBy: { name: 'asc' },
-    include: { _count: { select: { carParts: true } } },
-  });
-}
-
-/** For client components (e.g. dropdowns): returns only id and name, serializable. */
-export async function getSuppliersForSelect(): Promise<{ id: string; name: string }[]> {
-  const tenantId = await getTenantId();
-  if (!tenantId) return [];
-  const rows = await prisma.supplier.findMany({
-    where: { tenantId },
+    where: { ...branchScope(ctx), deletedAt: null },
     orderBy: { name: 'asc' },
     select: { id: true, name: true },
   });
-  return rows;
+}
+
+export async function getSuppliers(options?: { q?: string; page?: number; pageSize?: number }) {
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return { items: [], total: 0 };
+  const page = options?.page ?? 1;
+  const pageSize = Math.min(options?.pageSize ?? 50, 100);
+  const q = options?.q?.trim();
+
+  const where = {
+    ...branchScope(ctx),
+    deletedAt: null,
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' as const } },
+            { contactPerson: { contains: q, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.supplier.findMany({
+      where,
+      orderBy: { name: 'asc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: { _count: { select: { carParts: true, purchaseOrders: true } } },
+    }),
+    prisma.supplier.count({ where }),
+  ]);
+
+  return { items, total, page, pageSize };
 }
 
 export async function createSupplier(data: SupplierInput) {
-  const tenantId = await requireTenantId();
+  const ctx = await requirePermission('suppliers:write');
   const parsed = supplierSchema.parse(data);
 
   const supplier = await prisma.supplier.create({
     data: {
-      tenantId,
+      companyId: ctx.company.id,
+      branchId: ctx.branch.id,
       name: parsed.name,
-      contactPerson: parsed.contactPerson ?? null,
-      phone: parsed.phone ?? null,
-      email: parsed.email ?? null,
-      address: parsed.address ?? null,
-      notes: parsed.notes ?? null,
+      contactPerson: parsed.contactPerson || null,
+      phone: parsed.phone || null,
+      email: parsed.email || null,
+      address: parsed.address || null,
+      notes: parsed.notes || null,
     },
   });
 
+  await logActivity({
+    ctx,
+    action: 'supplier.created',
+    entityType: 'Supplier',
+    entityId: supplier.id,
+    summary: `Created supplier ${supplier.name}`,
+  });
+
   revalidatePath('/suppliers');
-  revalidatePath('/inventory');
+  revalidatePath('/marketplace');
   return supplier;
 }
 
 export async function updateSupplier(id: string, data: SupplierInput) {
-  const tenantId = await requireTenantId();
+  const ctx = await requirePermission('suppliers:write');
   const parsed = supplierSchema.parse(data);
 
+  const existing = await prisma.supplier.findFirst({
+    where: { id, ...accessibleWhere(ctx), deletedAt: null },
+  });
+  if (!existing) throw new Error('Supplier not found');
+
   const supplier = await prisma.supplier.update({
-    where: { id, tenantId },
+    where: { id },
     data: {
       name: parsed.name,
-      contactPerson: parsed.contactPerson ?? null,
-      phone: parsed.phone ?? null,
-      email: parsed.email ?? null,
-      address: parsed.address ?? null,
-      notes: parsed.notes ?? null,
+      contactPerson: parsed.contactPerson || null,
+      phone: parsed.phone || null,
+      email: parsed.email || null,
+      address: parsed.address || null,
+      notes: parsed.notes || null,
     },
   });
 
+  await logActivity({
+    ctx,
+    action: 'supplier.updated',
+    entityType: 'Supplier',
+    entityId: supplier.id,
+    summary: `Updated supplier ${supplier.name}`,
+  });
+
   revalidatePath('/suppliers');
-  revalidatePath('/inventory');
   return supplier;
 }
 
 export async function deleteSupplier(id: string) {
-  const tenantId = await requireTenantId();
-  await prisma.supplier.delete({ where: { id, tenantId } });
+  const ctx = await requirePermission('suppliers:delete');
+  const existing = await prisma.supplier.findFirst({
+    where: { id, ...accessibleWhere(ctx) },
+  });
+  if (!existing) throw new Error('Supplier not found');
+
+  await prisma.supplier.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
+
+  await logActivity({
+    ctx,
+    action: 'supplier.deleted',
+    entityType: 'Supplier',
+    entityId: id,
+    summary: `Archived supplier ${existing.name}`,
+  });
+
   revalidatePath('/suppliers');
-  revalidatePath('/inventory');
 }

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createSupplier, updateSupplier } from '@/app/actions/suppliers';
+import { formError } from '@/lib/form-error';
 
 interface SupplierFormInitial {
   id: string;
@@ -65,7 +66,7 @@ export function SupplierFormDialog({ trigger, supplier, open: controlledOpen, on
       setOpen(false);
       router.refresh();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      const msg = formError(err);
       if (msg.includes('Database is not connected')) {
         setError('setup');
       } else {
