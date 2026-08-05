@@ -11,16 +11,19 @@ A permanent company **Al-Noor Auto Care** (`slug: demo-auto`) with:
 
 ## Enter the demo
 
-### Production (Clerk)
+### Production (Clerk) — recommended path (no OTP)
+
+1. Open **`/demo`**
+2. Use **Enter demo (no OTP)** with:
 
 | Role | Email | Password |
 |------|-------|----------|
-| Company Owner (platform admin) | `demo.owner@gearvo.app` | `GearvoDemo2026!` |
-| Branch Manager · Riyadh Main | `demo.manager@gearvo.app` | `GearvoDemo2026!` |
+| Company Owner | `demo.owner@gearvo.app` | `GearvoDemo2026!` |
+| Branch Manager | `demo.manager@gearvo.app` | `GearvoDemo2026!` |
 
-1. Open `/sign-in`
-2. Sign in with the owner credentials
-3. Open `/dashboard` — Al-Noor Auto Care loads automatically
+This uses a Clerk sign-in ticket for demo accounts only, so email OTP is skipped.
+
+Regular `/sign-in` may still prompt for OTP depending on your Clerk dashboard “email code / client trust” settings — that is instance-wide and cannot be disabled for one account only inside Clerk.
 
 Re-provision Clerk links after a full demo reset:
 

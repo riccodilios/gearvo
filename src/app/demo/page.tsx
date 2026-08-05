@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { MarketingFooter, MarketingNav } from '@/components/marketing/MarketingChrome';
 import { GearvoMark } from '@/components/brand/GearvoLogo';
+import { DemoPasswordLogin } from '@/components/demo/DemoPasswordLogin';
 import { ResetDemoButton } from '@/components/demo/ResetDemoButton';
 import { ArrowRight, Building2, Users, Package, Shield } from 'lucide-react';
 
@@ -75,19 +76,23 @@ export default function DemoPage() {
               <p className="font-mono text-zinc-300">GearvoDemo2026!</p>
             </div>
           </div>
-          <div className="mt-6 flex flex-wrap gap-3">
+
+          <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950/80 p-4">
+            <h3 className="font-semibold text-zinc-100">Recommended: skip OTP</h3>
+            <p className="mt-1 text-sm text-zinc-400">
+              Clerk may ask for an email code on the normal sign-in page. Use this form instead —
+              it signs demo accounts in with a ticket (no OTP).
+            </p>
+            <DemoPasswordLogin />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
             <Link
               href="/sign-in"
-              className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-400"
+              className="inline-flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-medium hover:bg-zinc-900"
             >
-              Sign in to demo
+              Regular Clerk sign-in
               <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-medium hover:bg-zinc-900"
-            >
-              Dashboard
             </Link>
           </div>
         </div>

@@ -126,6 +126,13 @@ async function main() {
         },
       });
 
+      // Soften MFA so password UI is cleaner (OTP may still appear from instance email settings)
+      try {
+        await clerkFetch(`/users/${clerkId}/disable_mfa`, { method: 'POST' });
+      } catch {
+        /* ok */
+      }
+
       creds.push({
         role: account.roleLabel,
         email: account.email,
