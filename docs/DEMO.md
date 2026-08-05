@@ -11,20 +11,27 @@ A permanent company **Al-Noor Auto Care** (`slug: demo-auto`) with:
 
 ## Enter the demo
 
-1. Open `/demo` for instructions, or `/dashboard` after auth.
-2. **Local bypass:** `ALLOW_DEV_AUTH_BYPASS=true` and `DEV_USER_CLERK_ID=dev_clerk_owner` (default owner).
-3. **Clerk:** sign in as a user that is a member of Al-Noor / platform admin.
+### Production (Clerk)
 
-Demo emails (local identities):
-
-| Role | Email | Clerk ID |
+| Role | Email | Password |
 |------|-------|----------|
-| Owner (platform admin) | owner@demo.gearvo.local | `dev_clerk_owner` |
-| Branch manager | manager@demo.gearvo.local | `dev_clerk_manager` |
-| Service advisor | advisor@demo.gearvo.local | `dev_clerk_advisor` |
-| Technician | tech@demo.gearvo.local | `dev_clerk_tech` |
-| Cashier | cashier@demo.gearvo.local | `dev_clerk_cashier` |
-| Inventory | inventory@demo.gearvo.local | `dev_clerk_inventory` |
+| Company Owner (platform admin) | `demo.owner@gearvo.app` | `GearvoDemo2026!` |
+| Branch Manager · Riyadh Main | `demo.manager@gearvo.app` | `GearvoDemo2026!` |
+
+1. Open `/sign-in`
+2. Sign in with the owner credentials
+3. Open `/dashboard` — Al-Noor Auto Care loads automatically
+
+Re-provision Clerk links after a full demo reset:
+
+```bash
+node scripts/provision-demo-clerk.js
+```
+
+### Local bypass
+
+Set `ALLOW_DEV_AUTH_BYPASS=true` and open `/dashboard` (uses `dev_clerk_owner`).
+
 
 ## Reset demo data
 

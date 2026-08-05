@@ -59,31 +59,35 @@ export default function DemoPage() {
         </div>
 
         <div className="mt-10 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6">
-          <h2 className="text-lg font-semibold">Demo access</h2>
-          <ol className="mt-4 list-decimal space-y-2 ps-5 text-sm text-zinc-300">
-            <li>
-              Local / bypass mode: set <code className="rounded bg-zinc-900 px-1.5 py-0.5 text-amber-400">ALLOW_DEV_AUTH_BYPASS=true</code> and open the dashboard (user{' '}
-              <code className="rounded bg-zinc-900 px-1.5 py-0.5 text-amber-400">dev_clerk_owner</code>).
-            </li>
-            <li>
-              Production presentations: sign in with your Gearvo admin account that is a member of{' '}
-              <strong>Al-Noor Auto Care</strong>, or use platform admin.
-            </li>
-            <li>Email reference: <code className="rounded bg-zinc-900 px-1.5 py-0.5">owner@demo.gearvo.local</code></li>
-          </ol>
+          <h2 className="text-lg font-semibold">Demo credentials</h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Use these accounts on production (Clerk). Same password for both.
+          </p>
+          <div className="mt-4 space-y-3 text-sm">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+              <p className="font-medium text-zinc-200">Company Owner · full access</p>
+              <p className="mt-1 font-mono text-amber-400">demo.owner@gearvo.app</p>
+              <p className="font-mono text-zinc-300">GearvoDemo2026!</p>
+            </div>
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+              <p className="font-medium text-zinc-200">Branch Manager · Riyadh Main</p>
+              <p className="mt-1 font-mono text-amber-400">demo.manager@gearvo.app</p>
+              <p className="font-mono text-zinc-300">GearvoDemo2026!</p>
+            </div>
+          </div>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
-              href="/dashboard"
+              href="/sign-in"
               className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-400"
             >
-              Enter dashboard
+              Sign in to demo
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/sign-in"
+              href="/dashboard"
               className="inline-flex items-center rounded-full border border-zinc-700 px-5 py-2.5 text-sm font-medium hover:bg-zinc-900"
             >
-              Sign in
+              Dashboard
             </Link>
           </div>
         </div>
