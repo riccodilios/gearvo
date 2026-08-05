@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { auth } from '@clerk/nextjs/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { env } from '@/server/env';
 import {
@@ -14,6 +15,26 @@ import { ensureCompanyIntegrations } from '@/server/integrations/registry';
 import { logActivity } from '@/server/audit';
 import { assertRateLimit } from '@/server/rate-limit';
 import { toUserError } from '@/server/errors';
+
+function createShopErrorMessage(err: unknown): string {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === 'P2002') {
+      return 'That shop URL is already taken. Try a different name or slug.';
+    }
+    if (err.code === 'P1001' || err.code === 'P1017') {
+      return 'Database is not connected. Please try again in a moment.';
+    }
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes("Can't reach database") || msg.includes('Connection')) {
+    return 'Database is not connected. Set DATABASE_URL and run migrations.';
+  }
+  if (msg.toLowerCase().includes('cookie')) {
+    // Company may still have been created — membership is enough for workspace.
+    return 'Shop was created but session cookies failed. Open the dashboard and refresh.';
+  }
+  return toUserError(err).message;
+}
 
 export async function createCompanyWorkspace(
   formData: FormData
@@ -64,12 +85,55 @@ export async function createCompanyWorkspace(
       }
     }
 
-    if (!user) return { error: 'Could not resolve user.' };
+    if (!user) return { error: 'Could not resolve user. Sign in, then try again.' };
+
+    // Already owns a shop — send them in instead of failing oddly
+    const existingMembership = await prisma.membership.findFirst({
+      where: { userId: user.id, isActive: true, role: { in: ['COMPANY_OWNER', 'COMPANY_ADMIN'] } },
+      include: { company: true, branch: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (existingMembership) {
+      try {
+        const cookieStore = await cookies();
+        cookieStore.set(WORKSPACE_COOKIE, existingMembership.companyId, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+        });
+        const branchId =
+          existingMembership.branchId ??
+          (
+            await prisma.branch.findFirst({
+              where: {
+                companyId: existingMembership.companyId,
+                isArchived: false,
+                deletedAt: null,
+              },
+              orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+            })
+          )?.id;
+        if (branchId) {
+          cookieStore.set(BRANCH_COOKIE, branchId, {
+            path: '/',
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
+          });
+        }
+      } catch {
+        /* membership alone is enough */
+      }
+      return { redirect: '/dashboard' };
+    }
 
     const existing = await prisma.company.findUnique({ where: { slug } });
     const finalSlug = existing ? `${slug}-${Date.now().toString(36)}` : slug;
 
-    const company = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx) => {
       const c = await tx.company.create({
         data: {
           name,
@@ -100,39 +164,42 @@ export async function createCompanyWorkspace(
         },
       });
 
+      await seedCompanyFeatures(c.id, 'TRIAL', tx);
+      await ensureCompanyIntegrations(c.id, tx);
+
       return { company: c, branch };
     });
 
-    await seedCompanyFeatures(company.company.id, 'TRIAL');
-    await ensureCompanyIntegrations(company.company.id);
-
-    const cookieStore = await cookies();
-    cookieStore.set(WORKSPACE_COOKIE, company.company.id, {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-    });
-    cookieStore.set(BRANCH_COOKIE, company.branch.id, {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-    });
-    // Clear legacy cookie
-    cookieStore.delete('tenant-id');
+    try {
+      const cookieStore = await cookies();
+      cookieStore.set(WORKSPACE_COOKIE, created.company.id, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+      });
+      cookieStore.set(BRANCH_COOKIE, created.branch.id, {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+      });
+      cookieStore.delete('tenant-id');
+    } catch (cookieErr) {
+      console.error('[createCompanyWorkspace] cookie set failed', cookieErr);
+    }
 
     await logActivity({
       ctx: {
         user,
-        company: company.company,
-        branch: company.branch,
+        company: created.company,
+        branch: created.branch,
         membership: {
           id: '',
           userId: user.id,
-          companyId: company.company.id,
+          companyId: created.company.id,
           branchId: null,
           role: 'COMPANY_OWNER',
           isActive: true,
@@ -141,23 +208,18 @@ export async function createCompanyWorkspace(
         },
         role: 'COMPANY_OWNER',
         canAccessAllBranches: true,
-        branchIds: [company.branch.id],
+        branchIds: [created.branch.id],
       },
       action: 'company.created',
       entityType: 'Company',
-      entityId: company.company.id,
-      summary: `Created company ${company.company.name}`,
+      entityId: created.company.id,
+      summary: `Created company ${created.company.name}`,
     });
 
     return { redirect: '/dashboard' };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("Can't reach database") || msg.includes('Connection')) {
-      return {
-        error: 'Database is not connected. Set DATABASE_URL and run migrations.',
-      };
-    }
-    return { error: toUserError(err).message };
+    console.error('[createCompanyWorkspace]', err);
+    return { error: createShopErrorMessage(err) };
   }
 }
 

@@ -1,6 +1,8 @@
-import { FeatureModule, Plan } from '@prisma/client';
+import { FeatureModule, Plan, type PrismaClient } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import type { WorkspaceContext } from '@/server/auth';
+
+type FeatureDb = Pick<PrismaClient, 'companyFeatureFlag'>;
 
 const PLAN_FEATURES: Record<Plan, FeatureModule[]> = {
   TRIAL: [
@@ -36,18 +38,21 @@ const PLAN_FEATURES: Record<Plan, FeatureModule[]> = {
   ENTERPRISE: Object.values(FeatureModule),
 };
 
-export async function seedCompanyFeatures(companyId: string, plan: Plan) {
+export async function seedCompanyFeatures(
+  companyId: string,
+  plan: Plan,
+  db: FeatureDb = prisma
+) {
   const enabled = new Set(PLAN_FEATURES[plan]);
   const all = Object.values(FeatureModule);
-  await prisma.$transaction(
-    all.map((feature) =>
-      prisma.companyFeatureFlag.upsert({
-        where: { companyId_feature: { companyId, feature } },
-        create: { companyId, feature, enabled: enabled.has(feature) },
-        update: {},
-      })
-    )
-  );
+  await db.companyFeatureFlag.createMany({
+    data: all.map((feature) => ({
+      companyId,
+      feature,
+      enabled: enabled.has(feature),
+    })),
+    skipDuplicates: true,
+  });
 }
 
 export async function isFeatureEnabled(companyId: string, feature: FeatureModule): Promise<boolean> {

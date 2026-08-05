@@ -2,8 +2,11 @@ import {
   IntegrationProvider,
   IntegrationStatus,
   type CompanyIntegration,
+  type PrismaClient,
 } from '@prisma/client';
 import { prisma } from '@/lib/db';
+
+type IntegrationDb = Pick<PrismaClient, 'companyIntegration'>;
 
 export type IntegrationDefinition = {
   provider: IntegrationProvider;
@@ -65,20 +68,18 @@ export const INTEGRATION_REGISTRY: IntegrationDefinition[] = [
   },
 ];
 
-export async function ensureCompanyIntegrations(companyId: string) {
-  await prisma.$transaction(
-    INTEGRATION_REGISTRY.map((i) =>
-      prisma.companyIntegration.upsert({
-        where: { companyId_provider: { companyId, provider: i.provider } },
-        create: {
-          companyId,
-          provider: i.provider,
-          status: IntegrationStatus.DISCONNECTED,
-        },
-        update: {},
-      })
-    )
-  );
+export async function ensureCompanyIntegrations(
+  companyId: string,
+  db: IntegrationDb = prisma
+) {
+  await db.companyIntegration.createMany({
+    data: INTEGRATION_REGISTRY.map((i) => ({
+      companyId,
+      provider: i.provider,
+      status: IntegrationStatus.DISCONNECTED,
+    })),
+    skipDuplicates: true,
+  });
 }
 
 export async function getCompanyIntegrations(companyId: string): Promise<
