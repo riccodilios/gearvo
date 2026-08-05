@@ -84,6 +84,7 @@ export async function enterDemoWithPassword(emailRaw: string, password: string) 
   return {
     ok: true as const,
     ticket: token.token,
-    redirectTo: '/dashboard',
+    /** Isolated app entry for demo — not the marketing “Sign in” path */
+    redirectTo: '/dashboard?demo=1',
   };
 }

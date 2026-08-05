@@ -1,6 +1,6 @@
 import Layout from '@/components/layout/Layout';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { DemoBanner } from '@/components/DemoBanner';
+import { DemoBanner, PresentationDemoBanner } from '@/components/DemoBanner';
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 import { getWorkspaceContext, getNavAccess } from '@/server/auth';
 import { listBranches } from '@/app/actions/workspace';
@@ -15,10 +15,12 @@ export default async function AppLayout({
 }) {
   const [ctx, nav] = await Promise.all([getWorkspaceContext(), getNavAccess()]);
   const branches = ctx ? await listBranches() : [];
+  const isPresentationDemo = ctx?.company.slug === 'demo-auto';
 
   return (
     <>
       {!ctx && <DemoBanner />}
+      {isPresentationDemo && <PresentationDemoBanner />}
       <Layout
         shopName={ctx?.company.name ?? null}
         permissions={nav?.permissions}
