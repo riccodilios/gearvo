@@ -1,16 +1,16 @@
+'use client';
+
 import { MarketingFooter, MarketingNav } from '@/components/marketing/MarketingChrome';
+import { useI18n } from '@/i18n/provider';
 
 export default function TermsPage() {
+  const { t } = useI18n();
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
       <MarketingNav />
-      <main className="mx-auto max-w-3xl px-4 py-16 space-y-4 text-zinc-400">
-        <h1 className="text-4xl font-bold text-zinc-50">Terms of Service</h1>
-        <p>
-          By using Gearvo you agree to use the platform lawfully, protect account
-          credentials, and ensure you have rights to customer and vehicle data you
-          store. Subscription fees are billed per company plan.
-        </p>
+      <main className="mx-auto max-w-3xl space-y-4 px-4 py-16 text-zinc-400">
+        <h1 className="font-display text-4xl font-bold text-zinc-50">{t.legal.termsTitle}</h1>
+        <p className="leading-relaxed">{t.legal.termsBody}</p>
       </main>
       <MarketingFooter />
     </div>

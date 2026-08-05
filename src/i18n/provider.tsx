@@ -80,23 +80,27 @@ export function useI18n() {
   return ctx;
 }
 
-export function LanguageSwitcher() {
-  const { locale, setLocale } = useI18n();
+export function LanguageSwitcher({ className }: { className?: string } = {}) {
+  const { locale, setLocale, t } = useI18n();
   return (
-    <div className="flex gap-1 rounded-lg border border-zinc-700 p-1 text-xs" role="group" aria-label="Language">
+    <div
+      className={`flex gap-1 rounded-lg border border-zinc-700 bg-zinc-950/95 p-1 text-xs backdrop-blur ${className ?? ''}`}
+      role="group"
+      aria-label={t.common.language}
+    >
       <button
         type="button"
-        className={`rounded px-2 py-1 ${locale === 'en' ? 'bg-amber-600 text-white' : 'text-zinc-400'}`}
+        className={`rounded px-2.5 py-1.5 font-medium ${locale === 'en' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
         onClick={() => setLocale('en')}
       >
         EN
       </button>
       <button
         type="button"
-        className={`rounded px-2 py-1 ${locale === 'ar' ? 'bg-amber-600 text-white' : 'text-zinc-400'}`}
+        className={`rounded px-2.5 py-1.5 font-medium ${locale === 'ar' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
         onClick={() => setLocale('ar')}
       >
-        ع
+        العربية
       </button>
     </div>
   );

@@ -70,6 +70,52 @@ const en = {
     back: 'Back',
     viewAll: 'View all',
     required: 'Required',
+    language: 'Language',
+  },
+  auth: {
+    signInTitle: 'Sign in to Gearvo',
+    signUpTitle: 'Create your Gearvo account',
+    subtitle: 'Automotive Business Operating System',
+    backHome: 'Back to home',
+  },
+  onboarding: {
+    setupTitle: 'Set up your shop',
+    setupSubtitle:
+      'Enter your shop name and optional URL slug. Your data and metrics are isolated per workspace.',
+    shopName: 'Shop name',
+    shopNamePlaceholder: "e.g. Al-Noor Auto Care",
+    slug: 'URL slug (optional)',
+    slugHint: 'Used in URLs. Defaults to a slug from the shop name.',
+    createShop: 'Create my shop',
+    creating: 'Creating...',
+    alreadyHaveShop: 'Already have a shop?',
+    goDashboard: 'Go to dashboard',
+    connectDbTitle: 'Connect your database',
+    connectDbBody:
+      'To create your shop and save data, the app needs a PostgreSQL connection.',
+    continueDemo: 'Continue in demo mode (no data saved)',
+  },
+  trial: {
+    title: 'Start your free trial',
+    body: '14 days of Gearvo Pro modules. Create your company workspace in minutes.',
+    createAccount: 'Create account',
+    createWorkspace: 'Create company workspace',
+  },
+  bookDemo: {
+    title: 'Book a demo',
+    body: 'See Al-Noor Auto Care — our multi-branch demo — and map Gearvo to your operation.',
+    company: 'Company name',
+    email: 'Work email',
+    branches: 'Number of branches',
+    submit: 'Request demo',
+  },
+  legal: {
+    privacyTitle: 'Privacy Policy',
+    privacyBody:
+      'Gearvo processes workshop operational data on behalf of each customer company. Tenant data is isolated by company and branch. We do not sell personal data. Contact privacy@gearvo.app for data requests.',
+    termsTitle: 'Terms of Service',
+    termsBody:
+      'By using Gearvo you agree to use the platform lawfully for your workshop operations. Feature availability depends on your plan. Contact legal@gearvo.app for enterprise agreements.',
   },
   pages: {
     features: {
@@ -197,6 +243,51 @@ const ar: typeof en = {
     back: 'رجوع',
     viewAll: 'عرض الكل',
     required: 'مطلوب',
+    language: 'اللغة',
+  },
+  auth: {
+    signInTitle: 'تسجيل الدخول إلى جيرفو',
+    signUpTitle: 'إنشاء حساب جيرفو',
+    subtitle: 'نظام تشغيل أعمال السيارات',
+    backHome: 'العودة للرئيسية',
+  },
+  onboarding: {
+    setupTitle: 'إعداد ورشتك',
+    setupSubtitle:
+      'أدخل اسم الورشة ورابطاً اختيارياً. بياناتك ومؤشراتك معزولة لكل مساحة عمل.',
+    shopName: 'اسم الورشة',
+    shopNamePlaceholder: 'مثال: العناية بالنور للسيارات',
+    slug: 'رابط URL (اختياري)',
+    slugHint: 'يُستخدم في الروابط. الافتراضي من اسم الورشة.',
+    createShop: 'إنشاء ورشتي',
+    creating: 'جارٍ الإنشاء...',
+    alreadyHaveShop: 'لديك ورشة مسبقاً؟',
+    goDashboard: 'الذهاب للوحة التحكم',
+    connectDbTitle: 'اربط قاعدة البيانات',
+    connectDbBody: 'لإنشاء ورشتك وحفظ البيانات تحتاج اتصالاً بقاعدة PostgreSQL.',
+    continueDemo: 'المتابعة في وضع العرض (بدون حفظ)',
+  },
+  trial: {
+    title: 'ابدأ تجربتك المجانية',
+    body: '١٤ يوماً من وحدات جيرفو الاحترافية. أنشئ مساحة شركتك خلال دقائق.',
+    createAccount: 'إنشاء حساب',
+    createWorkspace: 'إنشاء مساحة الشركة',
+  },
+  bookDemo: {
+    title: 'احجز عرضاً',
+    body: 'شاهد ورشة النور التجريبية متعددة الفروع، وربط جيرفو بعملياتك.',
+    company: 'اسم الشركة',
+    email: 'البريد الوظيفي',
+    branches: 'عدد الفروع',
+    submit: 'اطلب عرضاً',
+  },
+  legal: {
+    privacyTitle: 'سياسة الخصوصية',
+    privacyBody:
+      'يعالج جيرفو بيانات تشغيل الورش نيابة عن كل شركة عميلة. البيانات معزولة حسب الشركة والفرع. لا نبيع البيانات الشخصية. تواصل مع privacy@gearvo.app لطلبات البيانات.',
+    termsTitle: 'شروط الاستخدام',
+    termsBody:
+      'باستخدام جيرفو توافق على الاستخدام النظامي لعمليات ورشتك. توفر الميزات يعتمد على باقتك. تواصل مع legal@gearvo.app لاتفاقيات المؤسسات.',
   },
   pages: {
     features: {
