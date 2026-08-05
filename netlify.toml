@@ -1,6 +1,5 @@
-# Netlify build config for Gearvo (Next.js)
-# https://docs.netlify.com/configure-builds/file-based-configuration/
-# Netlify auto-detects Next.js and uses the OpenNext adapter.
+# Netlify build config for Gearvo (Next.js + Prisma + Supabase)
+# Requires DATABASE_URL (pooled) and DIRECT_URL (direct) env vars.
 
 [build]
   command = "npx prisma generate && npx prisma migrate deploy && npm run build"

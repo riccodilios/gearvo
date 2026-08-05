@@ -61,10 +61,14 @@ Every business row carries `companyId` and (where operational) `branchId`.
 
 ## Database
 
-PostgreSQL via Prisma. Schema: `prisma/schema.prisma`.  
-Migrations: `prisma/migrations/` — deploy with `npx prisma migrate deploy` (not `db push` in production).
+**Supabase PostgreSQL** via Prisma (`prisma/schema.prisma`).
 
-Core domains: CRM (Customer, Vehicle), Inventory (Supplier, CarPart), Repairs, Invoices/Payments/Installments, Purchase Orders, Expenses, ActivityLog, CompanyFeatureFlag, CompanyIntegration.
+- `DATABASE_URL` — pooled (app / Netlify)
+- `DIRECT_URL` — direct (migrations)
+
+See [docs/SUPABASE.md](./docs/SUPABASE.md). Migrations: `npx prisma migrate deploy`.
+
+Core domains: CRM, Inventory, Repairs, Invoices/Payments/Installments, Purchase Orders, Expenses, ActivityLog, FeatureFlags, Integrations.
 
 ## Local development
 
@@ -80,7 +84,7 @@ Seed creates `demo-auto` (Al-Noor Auto Care) and `dev_clerk_owner`.
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) and [NETLIFY.md](./NETLIFY.md).
 
-Required: `DATABASE_URL`, Clerk publishable + secret keys, `CLERK_WEBHOOK_SECRET` for user sync.
+Required: `DATABASE_URL`, `DIRECT_URL`, Clerk publishable + secret keys, `CLERK_WEBHOOK_SECRET` for user sync.
 
 Build: `prisma generate` → `prisma migrate deploy` → `next build`.
 

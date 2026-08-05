@@ -5,12 +5,12 @@
 import type { PrismaClient } from '@prisma/client';
 import { FeatureModule, IntegrationStatus } from '@prisma/client';
 
-import { DEMO_COMPANY_SLUG } from '@/server/demo-constants';
+import { DEMO_COMPANY_SLUG } from './demo-constants';
 import {
   DEMO_PRESENTATION_ACCOUNTS,
   linkDemoClerkAccounts,
   resolveDemoStaffUser,
-} from '@/server/demo-clerk-link';
+} from './demo-clerk-link';
 
 export { DEMO_COMPANY_SLUG };
 export const DEMO_OWNER_CLERK_ID = 'dev_clerk_owner';

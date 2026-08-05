@@ -1,138 +1,89 @@
-# Gearvo – Full setup guide
-
-Follow these steps to get the app running with a real database and all features working.
-
----
+# Gearvo – Setup guide (Supabase PostgreSQL + Clerk)
 
 ## 1. Prerequisites
 
-- **Node.js** 18+ (check: `node -v`)
-- **PostgreSQL** – choose one:
-  - **Option A:** [PostgreSQL](https://www.postgresql.org/download/) installed locally (default port 5432)
-  - **Option B:** Docker: `docker run -d --name gearvo-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=gearvo -p 5432:5432 postgres:16`
-  - **Option C:** Free hosted DB – [Neon](https://neon.tech) or [Supabase](https://supabase.com) (get connection string from dashboard)
+- **Node.js** 20+
+- **Docker Desktop** (for local Supabase) **or** a hosted [Supabase](https://supabase.com) project
+- **Clerk** keys for auth (required in production)
+
+See [docs/SUPABASE.md](./docs/SUPABASE.md) for database details.
 
 ---
 
-## 2. Install dependencies
+## 2. Install
 
 ```bash
-cd c:\Users\2007r\Gearvo
 npm install
-```
-
----
-
-## 3. Environment variables
-
-Create `.env` from the example:
-
-```bash
 cp .env.example .env
 ```
 
-Edit `.env` and set **at least** the database URL:
+---
 
-**Local PostgreSQL (default user/password):**
-```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gearvo?schema=public"
+## 3. Database
+
+### Local Supabase (recommended for development)
+
+```bash
+npx supabase start
 ```
 
-**Docker (as above):**
+`.env`:
+
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gearvo?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+DIRECT_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 ```
 
-**Neon / Supabase:**  
-Paste the connection string they give you, e.g.:
-```env
-DATABASE_URL="postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require"
-```
+### Hosted Supabase
 
-*(Clerk, Stripe, Cloudinary in `.env.example` are optional and can be added later.)*
+Paste pooled + direct URLs from the Supabase dashboard into `DATABASE_URL` and `DIRECT_URL` (see `.env.example`).
 
 ---
 
-## 4. Create database and tables
-
-From the project root:
+## 4. Migrate + seed
 
 ```bash
 npx prisma generate
 npx prisma migrate deploy
 npx prisma db seed
+node scripts/provision-demo-clerk.js
 ```
-
-- **generate** – builds the Prisma client  
-- **migrate deploy** – applies versioned migrations (use `migrate dev` while developing)  
-- **db seed** – creates demo company “Al-Noor Auto Care” (`demo-auto`), branches, customers, vehicles, parts, repairs, invoices
-
-For local demo **without Clerk**, add `ALLOW_DEV_AUTH_BYPASS=true` to `.env` (never in production).
-
-If any command fails, check that PostgreSQL is running and `DATABASE_URL` in `.env` is correct (user, password, host, port, database name).
 
 ---
 
-## 5. Run the app
+## 5. Clerk
+
+Add to `.env`:
+
+```env
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+```
+
+Local-only without Clerk:
+
+```env
+ALLOW_DEV_AUTH_BYPASS=true
+```
+
+Never enable bypass in production.
+
+---
+
+## 6. Run
 
 ```bash
 npm run dev
 ```
 
-Open **http://localhost:3000**.
-
-See also [ARCHITECTURE.md](./ARCHITECTURE.md) for Company → Branch tenancy and RBAC.
-
----
-
-## 6. First-time flow
-
-- **Landing (**`/`**)** – marketing page; use **“Create your shop”** or **“Sign in”**.
-- **Set up your shop (**`/welcome/setup`**)**  
-  - If the DB is connected, use **“Create your shop”**: enter shop name and slug (e.g. `my-garage`).  
-  - This creates your tenant and sets the `tenant-id` cookie so all pages use your shop.
-- **Dashboard (**`/dashboard`**)**  
-  - After creating a shop you’ll be redirected here.  
-  - If you ran `db:seed`, you’ll see data for “Demo Auto Shop”. You can create a new shop from `/welcome/setup` and then add your own data.
-
-**Without a database:**  
-If `DATABASE_URL` is wrong or PostgreSQL is not running, the app runs in **demo mode** (read-only, no real data). Use “Continue in demo mode” on the setup page, or fix the DB and refresh.
+- App: http://localhost:3000  
+- Create shop: `/welcome/setup`  
+- Demo: `/demo`  
 
 ---
 
-## 7. Verify everything works
+## Verification
 
-| Action | Where | Expected |
-|--------|--------|----------|
-| View dashboard KPIs | `/dashboard` | Numbers and charts (or zeros if new tenant) |
-| Add a customer | `/customers` → “Add customer” | Saves and appears in list |
-| Add a vehicle | Customer detail → Vehicles tab | Saves and shows under customer |
-| Add a supplier | `/suppliers` | Saves and appears in list |
-| Add inventory | `/inventory` | Part created; low-stock alert if quantity &lt; threshold |
-| Create repair order | `/repair-orders` | RO created; can “Generate invoice” |
-| Pay an invoice | `/invoices` → Pay | Payment recorded; balance updates |
-| View analytics | `/analytics` | Revenue/profit and payment-method charts |
-
----
-
-## 8. Optional: Auth (Clerk) and payments (Stripe)
-
-- **Clerk:** Create an app at [clerk.com](https://clerk.com), add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` to `.env`. Then wire sign-in/sign-up in your layout and protect routes as needed.
-- **Stripe:** Create a project at [stripe.com](https://stripe.com), add the publishable and secret keys (and webhook secret if using webhooks) to `.env`. Use them in your payment flow (e.g. checkout or “Pay” on invoices).
-
-The app runs and all core features (customers, vehicles, suppliers, inventory, repair orders, invoices, analytics) work with only `DATABASE_URL` set.
-
----
-
-## Quick reference
-
-| Task | Command |
-|------|--------|
-| Dev server | `npm run dev` |
-| Regenerate Prisma client | `npx prisma generate` |
-| Apply schema to DB | `npx prisma migrate deploy` |
-| Seed demo data | `npx prisma db seed` |
-| Open DB GUI | `npx prisma studio` |
-| Production build | `npm run build` && `npm start` |
-
-If something doesn’t work, double-check: (1) PostgreSQL is running, (2) `DATABASE_URL` in `.env` is correct, (3) you ran `prisma migrate deploy` and `prisma db seed` after setting `DATABASE_URL`.
+1. Sign in with a real Clerk user → create a company → sidebar shows Customers, Repairs, Inventory, etc.  
+2. Create a customer → sign out → sign in → customer still there  
+3. Demo account only sees Al-Noor data (`demo-auto`)

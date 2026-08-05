@@ -25,6 +25,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://gearvo:gearvo@localhost:5432/gearvo?schema=public
+      DIRECT_URL: postgresql://gearvo:gearvo@localhost:5432/gearvo?schema=public
       ALLOW_DEV_AUTH_BYPASS: 'true'
       NODE_ENV: test
 
