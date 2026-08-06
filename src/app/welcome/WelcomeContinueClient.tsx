@@ -60,6 +60,12 @@ export function WelcomeContinueClient() {
     })().catch((err) => {
       console.error(err);
       if (!cancelled) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // Client JS from an older deploy calling a new build → hard reload once.
+        if (msg.includes('Server Action') || msg.includes('UnrecognizedAction')) {
+          window.location.reload();
+          return;
+        }
         setError('Something went wrong finishing sign-in.');
         setMessage('Sign-in incomplete');
       }
