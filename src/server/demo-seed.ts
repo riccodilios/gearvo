@@ -440,22 +440,35 @@ export async function seedDemoCompany(prisma: PrismaClient) {
   const mainParts = parts.filter((p) => p.branchId === mainBranch.id);
   const northParts = parts.filter((p) => p.branchId === northBranch.id);
 
-  let roSeq = 10001;
-  let invSeq = 20001;
+  let nextRoNum = 10001;
+  let nextInvNum = 20001;
 
   const customerSpend = new Map<string, number>();
   const customerOutstanding = new Map<string, number>();
 
   const roJobs = Array.from({ length: 48 }, (_, i) => i);
 
-  async function createOneRo(i: number) {
-    const vehicle = vehicles[Math.floor(rnd() * vehicles.length)];
+  async function createOneRo(i: number, opts?: { age?: number; forceStatus?: 'PENDING' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'COMPLETED' | 'DELIVERED'; forcePaidToday?: boolean; branchId?: string }) {
+    const branchFilter = opts?.branchId;
+    const vehiclePool = branchFilter
+      ? vehicles.filter((v) => v.branchId === branchFilter)
+      : vehicles;
+    const vehicle = vehiclePool[Math.floor(rnd() * vehiclePool.length)] ?? vehicles[Math.floor(rnd() * vehicles.length)];
     const customer = customers.find((c) => c.id === vehicle.customerId)!;
     const branchId = vehicle.branchId;
     const pool = branchId === mainBranch.id ? mainParts : northParts;
-    if (!pool.length) return;
+    if (!pool.length) return null;
 
-    const age = Math.floor(rnd() * 300);
+    // Bias ages so dashboards stay alive: many jobs this month, some today.
+    let age: number;
+    if (opts?.age != null) {
+      age = opts.age;
+    } else {
+      const ageRoll = rnd();
+      if (ageRoll < 0.1) age = Math.floor(rnd() * 2); // today / yesterday (open bay)
+      else if (ageRoll < 0.5) age = 1 + Math.floor(rnd() * 27); // current month window
+      else age = 28 + Math.floor(rnd() * 270); // historical
+    }
     const createdAt = daysAgo(age);
     const labor = LABOR_TYPES[Math.floor(rnd() * LABOR_TYPES.length)];
     const usedParts: typeof pool = [];
@@ -485,12 +498,21 @@ export async function seedDemoCompany(prisma: PrismaClient) {
 
     let status: 'PENDING' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'COMPLETED' | 'DELIVERED' =
       'COMPLETED';
-    if (age < 5) status = rnd() > 0.4 ? 'IN_PROGRESS' : 'PENDING';
-    else if (age < 12) status = rnd() > 0.5 ? 'WAITING_PARTS' : 'IN_PROGRESS';
-    else if (age < 25) status = rnd() > 0.3 ? 'COMPLETED' : 'DELIVERED';
-    else status = rnd() > 0.2 ? 'DELIVERED' : 'COMPLETED';
+    if (opts?.forceStatus) {
+      status = opts.forceStatus;
+    } else if (age < 2) {
+      status = rnd() > 0.35 ? 'IN_PROGRESS' : 'PENDING';
+    } else if (age < 6) {
+      // Mix open + completed so "this week" and monthly revenue stay populated
+      status =
+        rnd() > 0.45 ? (rnd() > 0.5 ? 'COMPLETED' : 'DELIVERED') : 'IN_PROGRESS';
+    } else if (age < 14) {
+      status = rnd() > 0.25 ? (rnd() > 0.4 ? 'DELIVERED' : 'COMPLETED') : 'WAITING_PARTS';
+    } else {
+      status = rnd() > 0.2 ? 'DELIVERED' : 'COMPLETED';
+    }
 
-    const orderNumber = `RO-${10001 + i}`;
+    const orderNumber = `RO-${nextRoNum++}`;
     const ro = await prisma.repairOrder.create({
       data: {
         companyId: company.id,
@@ -511,12 +533,15 @@ export async function seedDemoCompany(prisma: PrismaClient) {
       },
     });
 
-    if (status !== 'COMPLETED' && status !== 'DELIVERED') return;
+    if (status !== 'COMPLETED' && status !== 'DELIVERED') return ro;
 
     const roll = rnd();
     let invStatus: 'PAID' | 'PARTIAL' | 'UNPAID' | 'OVERDUE' = 'PAID';
     let paidAmount = totalPrice;
-    if (roll > 0.82) {
+    if (opts?.forcePaidToday) {
+      invStatus = 'PAID';
+      paidAmount = totalPrice;
+    } else if (roll > 0.82) {
       invStatus = 'OVERDUE';
       paidAmount = 0;
     } else if (roll > 0.65) {
@@ -528,13 +553,16 @@ export async function seedDemoCompany(prisma: PrismaClient) {
     }
 
     const remaining = Math.max(0, totalPrice - paidAmount);
+    const invoiceCreatedAt = opts?.forcePaidToday
+      ? daysAgo(age)
+      : daysAgo(Math.max(0, age - 1));
     const invoice = await prisma.invoice.create({
       data: {
         companyId: company.id,
         branchId,
         customerId: customer.id,
         repairOrderId: ro.id,
-        invoiceNumber: `INV-${20001 + i}`,
+        invoiceNumber: `INV-${nextInvNum++}`,
         status: invStatus,
         taxAmount: 0,
         discountAmount: 0,
@@ -542,7 +570,7 @@ export async function seedDemoCompany(prisma: PrismaClient) {
         paidAmount,
         remainingBalance: remaining,
         dueDate: daysAgo(Math.max(0, age - 14)),
-        createdAt: daysAgo(Math.max(0, age - 1)),
+        createdAt: invoiceCreatedAt,
         items: {
           create: [
             {
@@ -570,6 +598,19 @@ export async function seedDemoCompany(prisma: PrismaClient) {
 
     if (paidAmount > 0) {
       const methods = ['CASH', 'CARD', 'BANK_TRANSFER'] as const;
+      // Keep "paid today" on today; otherwise pin payment to the job's age day
+      // so current-month KPIs stay accurate when forcePaidToday is used for older jobs.
+      const paymentDate = (() => {
+        if (opts?.forcePaidToday && age === 0) {
+          const d = new Date();
+          d.setHours(9 + Math.floor(rnd() * 8), Math.floor(rnd() * 60), 0, 0);
+          return d;
+        }
+        if (opts?.forcePaidToday) {
+          return daysAgo(age);
+        }
+        return daysAgo(Math.max(0, age - 1));
+      })();
       await prisma.payment.create({
         data: {
           companyId: company.id,
@@ -578,7 +619,7 @@ export async function seedDemoCompany(prisma: PrismaClient) {
           customerId: customer.id,
           amount: paidAmount,
           method: methods[Math.floor(rnd() * methods.length)],
-          paymentDate: daysAgo(Math.max(0, age - 1)),
+          paymentDate,
           notes: 'Demo payment',
         },
       });
@@ -590,10 +631,8 @@ export async function seedDemoCompany(prisma: PrismaClient) {
       await prisma.installment.createMany({
         data: Array.from({ length: months }, (_, m) => {
           const due = new Date();
-          due.setDate(due.getDate() + (m - 1) * 30);
-          let st: 'PENDING' | 'PAID' | 'OVERDUE' = 'PENDING';
-          if (due.getTime() < Date.now() - 3 * 86400000 && m === 0) st = 'OVERDUE';
-          if (m === 0 && rnd() > 0.6) st = 'PAID';
+          due.setHours(12, 0, 0, 0);
+          due.setDate(due.getDate() + 7 + m * 14); // upcoming within ~35 days
           return {
             companyId: company.id,
             branchId,
@@ -601,20 +640,168 @@ export async function seedDemoCompany(prisma: PrismaClient) {
             customerId: customer.id,
             amount: installmentAmount,
             dueDate: due,
-            status: st,
-            paidDate: st === 'PAID' ? daysAgo(2) : null,
+            status: 'PENDING' as const,
+            paidDate: null,
             notes: `Installment ${m + 1} of ${months}`,
           };
         }),
       });
     }
+
+    return { ro, invoice, remaining, customer, branchId, totalPrice };
   }
 
   for (let i = 0; i < roJobs.length; i += 6) {
     await Promise.all(roJobs.slice(i, i + 6).map((j) => createOneRo(j)));
   }
-  roSeq = 10001 + roJobs.length;
-  invSeq = 20001 + roJobs.length;
+
+  // Guaranteed live dashboard metrics for Riyadh Main (default demo branch)
+  // Always paid so KPIs never read as empty zeros in presentations.
+  for (const age of [0, 0, 0, 1]) {
+    await createOneRo(nextRoNum, {
+      age,
+      forceStatus: 'DELIVERED',
+      forcePaidToday: true,
+      branchId: mainBranch.id,
+    });
+  }
+  // Spread paid completed work across the current month (cap ages to stay in-month)
+  const dayOfMonth = Math.max(2, new Date().getDate());
+  for (let d = 2; d < dayOfMonth; d += 2) {
+    await createOneRo(nextRoNum, {
+      age: d,
+      forceStatus: d % 4 === 0 ? 'COMPLETED' : 'DELIVERED',
+      forcePaidToday: true,
+      branchId: mainBranch.id,
+    });
+  }
+  // North branch gets a lighter current-month pulse too
+  for (const age of [0, Math.min(3, dayOfMonth - 1), Math.min(5, dayOfMonth - 1)].filter((a) => a >= 0)) {
+    await createOneRo(nextRoNum, {
+      age,
+      forceStatus: 'DELIVERED',
+      forcePaidToday: true,
+      branchId: northBranch.id,
+    });
+  }
+
+  // Dedicated upcoming installments (next 30 days) so the KPI is never empty
+  {
+    const vehicle =
+      vehicles.find((v) => v.branchId === mainBranch.id) ?? vehicles[0];
+    const customer = customers.find((c) => c.id === vehicle.customerId)!;
+    const pool = mainParts.length ? mainParts : parts;
+    const part = pool[0];
+    const laborCost = 900;
+    const partsRetail = part.retailPrice * 2;
+    const partsCost = part.costPrice * 2;
+    const totalPrice = laborCost + partsRetail;
+    const profit = totalPrice - partsCost - laborCost * 0.35;
+    const paidAmount = Math.round(totalPrice * 0.25);
+    const remaining = totalPrice - paidAmount;
+
+    const ro = await prisma.repairOrder.create({
+      data: {
+        companyId: company.id,
+        branchId: mainBranch.id,
+        customerId: customer.id,
+        vehicleId: vehicle.id,
+        orderNumber: `RO-${nextRoNum++}`,
+        status: 'DELIVERED',
+        description: 'Major service — installment plan',
+        laborCost,
+        partsCostTotal: partsCost,
+        partsRetailTotal: partsRetail,
+        totalPrice,
+        profit,
+        notes: 'Demo installment showcase',
+        createdAt: daysAgo(10),
+        parts: {
+          create: [
+            {
+              carPartId: part.id,
+              quantity: 2,
+              costPrice: part.costPrice,
+              retailPrice: part.retailPrice,
+            },
+          ],
+        },
+      },
+    });
+
+    const invoice = await prisma.invoice.create({
+      data: {
+        companyId: company.id,
+        branchId: mainBranch.id,
+        customerId: customer.id,
+        repairOrderId: ro.id,
+        invoiceNumber: `INV-${nextInvNum++}`,
+        status: 'PARTIAL',
+        taxAmount: 0,
+        discountAmount: 0,
+        totalAmount: totalPrice,
+        paidAmount,
+        remainingBalance: remaining,
+        dueDate: daysAgo(0),
+        createdAt: daysAgo(10),
+        items: {
+          create: [
+            {
+              description: 'Major service — installment plan',
+              quantity: 1,
+              unitPrice: laborCost,
+              total: laborCost,
+            },
+            {
+              description: part.name,
+              quantity: 2,
+              unitPrice: part.retailPrice,
+              total: partsRetail,
+            },
+          ],
+        },
+      },
+    });
+
+    await prisma.payment.create({
+      data: {
+        companyId: company.id,
+        branchId: mainBranch.id,
+        invoiceId: invoice.id,
+        customerId: customer.id,
+        amount: paidAmount,
+        method: 'CARD',
+        paymentDate: daysAgo(10),
+        notes: 'Down payment',
+      },
+    });
+
+    const installmentAmount = Math.round(remaining / 3);
+    await prisma.installment.createMany({
+      data: [7, 14, 28].map((inDays, m) => {
+        const due = new Date();
+        due.setHours(12, 0, 0, 0);
+        due.setDate(due.getDate() + inDays);
+        return {
+          companyId: company.id,
+          branchId: mainBranch.id,
+          invoiceId: invoice.id,
+          customerId: customer.id,
+          amount: m === 2 ? remaining - installmentAmount * 2 : installmentAmount,
+          dueDate: due,
+          status: 'PENDING' as const,
+          paidDate: null,
+          notes: `Demo plan ${m + 1}/3`,
+        };
+      }),
+    });
+
+    customerSpend.set(customer.id, (customerSpend.get(customer.id) ?? 0) + paidAmount);
+    customerOutstanding.set(
+      customer.id,
+      (customerOutstanding.get(customer.id) ?? 0) + remaining
+    );
+  }
 
   await Promise.all(
     customers.map((c) =>
@@ -679,8 +866,8 @@ export async function seedDemoCompany(prisma: PrismaClient) {
   const year = new Date().getFullYear();
   await prisma.documentSequence.createMany({
     data: [
-      { companyId: company.id, type: 'RO', year, lastValue: roSeq - 10001 },
-      { companyId: company.id, type: 'INV', year, lastValue: invSeq - 20001 },
+      { companyId: company.id, type: 'RO', year, lastValue: nextRoNum - 10001 },
+      { companyId: company.id, type: 'INV', year, lastValue: nextInvNum - 20001 },
       { companyId: company.id, type: 'PO', year, lastValue: 8 },
     ],
   });
