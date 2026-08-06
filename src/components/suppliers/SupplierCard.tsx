@@ -27,6 +27,7 @@ import { toast } from '@/lib/mutation-toast';
 import { useSubmitGuard } from '@/hooks/use-submit-guard';
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/provider';
 
 interface SupplierCardProps {
   supplier: {
@@ -42,6 +43,7 @@ interface SupplierCardProps {
 }
 
 export function SupplierCard({ supplier }: SupplierCardProps) {
+  const { t } = useI18n();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -54,7 +56,7 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
       setDeleteOpen(false);
       try {
         await deleteSupplier(supplier.id);
-        toast.success('Supplier deleted');
+        toast.success(t.ui.supplierDeleted);
         router.refresh();
       } catch (err) {
         setHidden(false);
@@ -90,25 +92,33 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setEditOpen(true)}>
                   <Pencil className="me-2 h-4 w-4" />
-                  Edit
+                  {t.app.edit}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-red-500"
                   onClick={() => setDeleteOpen(true)}
                 >
                   <Trash2 className="me-2 h-4 w-4" />
-                  Delete
+                  {t.app.delete}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
           <div className="mt-4 space-y-1 text-sm text-zinc-400">
-            {supplier.phone && <p>Phone: {supplier.phone}</p>}
-            {supplier.email && <p>Email: {supplier.email}</p>}
+            {supplier.phone && (
+              <p>
+                {t.ui.phone}: {supplier.phone}
+              </p>
+            )}
+            {supplier.email && (
+              <p>
+                {t.ui.email}: {supplier.email}
+              </p>
+            )}
           </div>
           <div className="mt-3 border-t border-zinc-800 pt-3">
             <span className="text-xs text-zinc-500">
-              {supplier._count.carParts} parts
+              {t.ui.partsCount.replace('{count}', String(supplier._count.carParts))}
             </span>
           </div>
         </CardContent>
@@ -123,14 +133,13 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete supplier?</AlertDialogTitle>
+            <AlertDialogTitle>{t.ui.deleteSupplierTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove {supplier.name} from your suppliers. Parts linked to this
-              supplier will be unlinked but not deleted.
+              {t.ui.deleteSupplierDesc.replace('{name}', supplier.name)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={loading}>{t.app.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -139,7 +148,7 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
               disabled={loading}
               className="bg-red-600 hover:bg-red-700"
             >
-              {loading ? 'Deleting…' : 'Delete'}
+              {loading ? t.ui.deleting : t.app.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

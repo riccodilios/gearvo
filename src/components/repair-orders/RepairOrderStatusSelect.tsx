@@ -22,17 +22,18 @@ import {
 import { updateRepairOrderStatus } from '@/app/actions/repair-orders';
 import { runMutation } from '@/lib/mutation-toast';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/provider';
 
-const STATUSES = [
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'WAITING_PARTS', label: 'Waiting Parts' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+const STATUS_VALUES = [
+  'PENDING',
+  'IN_PROGRESS',
+  'WAITING_PARTS',
+  'COMPLETED',
+  'DELIVERED',
+  'CANCELLED',
 ] as const;
 
-type Status = (typeof STATUSES)[number]['value'];
+type Status = (typeof STATUS_VALUES)[number];
 
 interface RepairOrderStatusSelectProps {
   orderId: string;
@@ -43,6 +44,7 @@ export function RepairOrderStatusSelect({
   orderId,
   currentStatus,
 }: RepairOrderStatusSelectProps) {
+  const { t } = useI18n();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -51,6 +53,15 @@ export function RepairOrderStatusSelect({
     (_current, next: string) => next
   );
 
+  const statusLabels: Record<Status, string> = {
+    PENDING: t.ui.statusPending,
+    IN_PROGRESS: t.ui.statusInProgress,
+    WAITING_PARTS: t.ui.statusWaitingParts,
+    COMPLETED: t.ui.statusCompleted,
+    DELIVERED: t.ui.statusDelivered,
+    CANCELLED: t.ui.statusCancelled,
+  };
+
   const applyStatus = (value: string) => {
     startTransition(async () => {
       setOptimisticStatus(value);
@@ -58,7 +69,7 @@ export function RepairOrderStatusSelect({
         () => updateRepairOrderStatus(orderId, value as Status),
         {
           success:
-            value === 'CANCELLED' ? 'Repair order cancelled' : 'Status updated',
+            value === 'CANCELLED' ? t.ui.orderCancelledToast : t.ui.statusUpdated,
         }
       );
       router.refresh();
@@ -91,9 +102,9 @@ export function RepairOrderStatusSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {STATUSES.map((s) => (
-            <SelectItem key={s.value} value={s.value}>
-              {s.label}
+          {STATUS_VALUES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {statusLabels[value]}
             </SelectItem>
           ))}
         </SelectContent>
@@ -102,19 +113,18 @@ export function RepairOrderStatusSelect({
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel this repair order?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cancelling restores reserved stock and cannot be undone from this
-              screen. The order will be marked Cancelled.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t.ui.cancelOrderTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{t.ui.cancelOrderDesc}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="w-full sm:w-auto">Keep open</AlertDialogCancel>
+            <AlertDialogCancel className="w-full sm:w-auto">
+              {t.ui.keepOpen}
+            </AlertDialogCancel>
             <AlertDialogAction
               className="w-full bg-red-600 hover:bg-red-700 sm:w-auto"
               onClick={() => applyStatus('CANCELLED')}
             >
-              Cancel order
+              {t.ui.cancelOrder}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

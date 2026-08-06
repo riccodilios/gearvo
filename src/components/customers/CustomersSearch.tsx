@@ -7,8 +7,10 @@ import { useCallback } from 'react';
 import { useFilterPending } from '@/components/ui/filter-pending';
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/provider';
 
 export function CustomersSearch() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isPending, startTransition } = useFilterPending();
@@ -36,7 +38,7 @@ export function CustomersSearch() {
     <div className={cn('relative max-w-sm', isPending && 'ring-1 ring-amber-500/30 rounded-md')}>
       <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
       <Input
-        placeholder="Search customers..."
+        placeholder={t.ui.searchCustomers}
         defaultValue={searchParams.get('q') ?? ''}
         onChange={(e) => pushSearch(e.target.value)}
         className="ps-9"

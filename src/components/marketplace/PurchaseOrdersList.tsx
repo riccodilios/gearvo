@@ -17,6 +17,7 @@ import { toast } from '@/lib/mutation-toast';
 import { formError } from '@/lib/form-error';
 import { formatCurrency } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useI18n } from '@/i18n/provider';
 
 type Line = {
   id: string;
@@ -35,6 +36,7 @@ type Order = {
 };
 
 export function PurchaseOrdersList({ orders }: { orders: Order[] }) {
+  const { t } = useI18n();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const router = useRouter();
 
@@ -45,7 +47,7 @@ export function PurchaseOrdersList({ orders }: { orders: Order[] }) {
     setUpdatingId(id);
     try {
       await updatePurchaseOrderStatus(id, status);
-      toast.success(status === 'ORDERED' ? 'Marked as ordered' : 'Received — stock updated');
+      toast.success(status === 'ORDERED' ? t.ui.markedOrdered : t.ui.markedReceived);
       router.refresh();
     } catch (err) {
       toast.error(formError(err));
@@ -56,11 +58,13 @@ export function PurchaseOrdersList({ orders }: { orders: Order[] }) {
 
   const statusBadge = (status: string) => {
     const v = status.toLowerCase();
-    if (v === 'pending') return <Badge variant="secondary">Draft</Badge>;
+    if (v === 'pending') return <Badge variant="secondary">{t.ui.poDraft}</Badge>;
     if (v === 'ordered')
-      return <Badge className="bg-amber-600/20 text-amber-400">Ordered</Badge>;
+      return <Badge className="bg-amber-600/20 text-amber-400">{t.ui.poOrdered}</Badge>;
     if (v === 'received')
-      return <Badge className="bg-emerald-600/20 text-emerald-400">Received</Badge>;
+      return (
+        <Badge className="bg-emerald-600/20 text-emerald-400">{t.ui.poReceived}</Badge>
+      );
     return <Badge variant="outline">{status}</Badge>;
   };
 
@@ -74,7 +78,7 @@ export function PurchaseOrdersList({ orders }: { orders: Order[] }) {
           disabled={isUpdating}
           onClick={() => handleStatus(order.id, 'ORDERED')}
         >
-          {isUpdating ? '…' : 'Mark ordered'}
+          {isUpdating ? '…' : t.ui.markOrdered}
         </Button>
       );
     }
@@ -87,19 +91,18 @@ export function PurchaseOrdersList({ orders }: { orders: Order[] }) {
           disabled={isUpdating}
           onClick={() => handleStatus(order.id, 'RECEIVED')}
         >
-          {isUpdating ? '…' : 'Mark received'}
+          {isUpdating ? '…' : t.ui.markReceived}
         </Button>
       );
     }
     if (order.status === 'RECEIVED') {
-      return <span className="text-xs text-zinc-500">Stock updated</span>;
+      return <span className="text-xs text-zinc-500">{t.ui.stockUpdated}</span>;
     }
     return null;
   };
 
   return (
     <>
-      {/* Mobile cards */}
       <div className="space-y-3 md:hidden">
         {orders.map((order) => {
           const total = order.lines.reduce(
@@ -119,7 +122,8 @@ export function PurchaseOrdersList({ orders }: { orders: Order[] }) {
                     {order.supplier.name}
                   </p>
                   <p className="text-xs text-zinc-500">
-                    {order.lines.length} items · {formatCurrency(total)}
+                    {t.ui.itemsCount.replace('{count}', String(order.lines.length))} ·{' '}
+                    {formatCurrency(total)}
                   </p>
                 </div>
                 {statusBadge(order.status)}
@@ -130,17 +134,16 @@ export function PurchaseOrdersList({ orders }: { orders: Order[] }) {
         })}
       </div>
 
-      {/* Desktop table */}
       <Card className="hidden md:block">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Lines</TableHead>
-                <TableHead className="text-right">Total</TableHead>
+                <TableHead>{t.ui.colOrder}</TableHead>
+                <TableHead>{t.ui.colSupplier}</TableHead>
+                <TableHead>{t.ui.colStatus}</TableHead>
+                <TableHead>{t.ui.colLines}</TableHead>
+                <TableHead className="text-right">{t.ui.colTotal}</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -156,7 +159,9 @@ export function PurchaseOrdersList({ orders }: { orders: Order[] }) {
                     <TableCell className="font-medium">{order.orderNumber}</TableCell>
                     <TableCell>{order.supplier.name}</TableCell>
                     <TableCell>{statusBadge(order.status)}</TableCell>
-                    <TableCell>{order.lines.length} items</TableCell>
+                    <TableCell>
+                      {t.ui.itemsCount.replace('{count}', String(order.lines.length))}
+                    </TableCell>
                     <TableCell className="text-right">
                       {formatCurrency(total)}
                     </TableCell>

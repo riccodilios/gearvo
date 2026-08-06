@@ -81,6 +81,7 @@ const localeBootScript = `
     document.documentElement.lang = l;
     document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
     if (l === 'ar') document.documentElement.classList.add('locale-ar');
+    document.cookie = 'gearvo-locale=' + l + ';path=/;max-age=31536000;samesite=lax';
   } catch (e) {}
 })();
 `;

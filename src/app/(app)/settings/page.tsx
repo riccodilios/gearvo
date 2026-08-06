@@ -12,11 +12,13 @@ import { CompanySettingsForm } from '@/components/settings/CompanySettingsForm';
 import { FeatureFlagsPanel } from '@/components/settings/FeatureFlagsPanel';
 import { IntegrationsPanel } from '@/components/settings/IntegrationsPanel';
 import { BranchManager } from '@/components/settings/BranchManager';
+import { getT } from '@/i18n/server';
 
 export default async function SettingsPage() {
   const ctx = await getWorkspaceContext();
-  const [team, features, integrations, branches, activity, clerkUser] =
+  const [t, team, features, integrations, branches, activity, clerkUser] =
     await Promise.all([
+      getT(),
       getTeamUsers(),
       getFeatures(),
       getIntegrations(),
@@ -28,24 +30,24 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Settings"
-        description="Workspace, branches, features, and integrations"
+        title={t.app.settings}
+        description={t.ui.settingsDesc}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Account</CardTitle>
+            <CardTitle>{t.ui.account}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             {clerkUser ? (
               <>
                 <p>
-                  <span className="text-zinc-500">Signed in as </span>
+                  <span className="text-zinc-500">{t.ui.signedInAs} </span>
                   {clerkUser.primaryEmailAddress?.emailAddress}
                 </p>
                 <p className="text-zinc-500">
-                  Role: {ctx?.role?.replace(/_/g, ' ') ?? '—'}
+                  {t.ui.roleLabel}: {ctx?.role?.replace(/_/g, ' ') ?? '—'}
                 </p>
               </>
             ) : (
@@ -59,15 +61,15 @@ export default async function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Subscription</CardTitle>
+            <CardTitle>{t.ui.subscription}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <Badge>{ctx?.company.plan ?? 'TRIAL'}</Badge>
             <p className="text-sm text-zinc-500">
-              Manage billing via Stripe in the Integration Center when connected.
+              {t.ui.billingHint}
             </p>
             <Button asChild variant="outline" size="sm">
-              <Link href="/settings#integrations">Open Integration Center</Link>
+              <Link href="/settings#integrations">{t.ui.openIntegrationCenter}</Link>
             </Button>
           </CardContent>
         </Card>

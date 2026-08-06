@@ -13,12 +13,14 @@ import {
 import { Search } from 'lucide-react';
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/provider';
 
 export function InventorySearchFilter({
   categories,
 }: {
   categories: string[];
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -54,7 +56,7 @@ export function InventorySearchFilter({
       <div className="relative max-w-sm flex-1">
         <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
         <Input
-          placeholder="Search by part name or number..."
+          placeholder={t.ui.searchInventory}
           defaultValue={q}
           onChange={(e) => pushSearch(e.target.value)}
           className="ps-9"
@@ -62,10 +64,10 @@ export function InventorySearchFilter({
       </div>
       <Select value={category} onValueChange={handleCategoryChange}>
         <SelectTrigger className="w-full touch-manipulation sm:w-[180px]">
-          <SelectValue placeholder="Category" />
+          <SelectValue placeholder={t.ui.category} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All categories</SelectItem>
+          <SelectItem value="all">{t.ui.allCategories}</SelectItem>
           {categories.map((c) => (
             <SelectItem key={c} value={c}>
               {c}

@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShoppingCart, Package } from 'lucide-react';
 import { MarketplaceSupplierOrder } from '@/components/marketplace/MarketplaceSupplierOrder';
 import { PurchaseOrdersList } from '@/components/marketplace/PurchaseOrdersList';
+import { getT } from '@/i18n/server';
 
 function toNum(v: unknown): number {
   return typeof v === 'number' ? v : Number(String(v));
@@ -13,7 +14,8 @@ function toNum(v: unknown): number {
 
 export default async function MarketplacePage() {
   await gatePage('marketplace:read', FeatureModule.MARKETPLACE);
-  const [suppliersWithParts, ordersResult] = await Promise.all([
+  const [t, suppliersWithParts, ordersResult] = await Promise.all([
+    getT(),
     getSuppliersWithParts(),
     getPurchaseOrders(),
   ]);
@@ -52,17 +54,17 @@ export default async function MarketplacePage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Order parts"
-        description="Order parts from your suppliers and track purchase orders"
+        title={t.ui.marketplaceTitle}
+        description={t.ui.marketplaceDesc}
       />
 
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-zinc-100">Order from suppliers</h2>
+        <h2 className="mb-4 text-lg font-semibold text-zinc-100">{t.ui.orderFromSuppliers}</h2>
         {serializedSuppliers.length === 0 ? (
           <EmptyState
             icon={<Package className="h-6 w-6" />}
-            title="No parts linked to suppliers"
-            description="Add suppliers and assign parts to them in Inventory to order here."
+            title={t.ui.noPartsLinked}
+            description={t.ui.noPartsLinkedHint}
           />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
@@ -74,13 +76,13 @@ export default async function MarketplacePage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-zinc-100">Your purchase orders</h2>
+        <h2 className="mb-4 text-lg font-semibold text-zinc-100">{t.ui.yourPurchaseOrders}</h2>
         {serializedOrders.length === 0 ? (
           <EmptyState
             compact
             icon={<ShoppingCart className="h-5 w-5" />}
-            title="No purchase orders yet"
-            description="Place an order from a supplier above to track it here."
+            title={t.ui.noPurchaseOrders}
+            description={t.ui.noPurchaseOrdersHint}
           />
         ) : (
           <PurchaseOrdersList orders={serializedOrders} />

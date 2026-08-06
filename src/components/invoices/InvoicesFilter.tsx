@@ -9,8 +9,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useFilterPending } from '@/components/ui/filter-pending';
+import { useI18n } from '@/i18n/provider';
 
 export function InvoicesFilter() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { startTransition } = useFilterPending();
@@ -31,14 +33,14 @@ export function InvoicesFilter() {
   return (
     <Select value={status} onValueChange={handleChange}>
       <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Filter by status" />
+        <SelectValue placeholder={t.ui.filterByStatus} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">All Status</SelectItem>
-        <SelectItem value="UNPAID">Unpaid</SelectItem>
-        <SelectItem value="PARTIAL">Partial</SelectItem>
-        <SelectItem value="PAID">Paid</SelectItem>
-        <SelectItem value="OVERDUE">Overdue</SelectItem>
+        <SelectItem value="all">{t.ui.allStatuses}</SelectItem>
+        <SelectItem value="UNPAID">{t.ui.statusUnpaid}</SelectItem>
+        <SelectItem value="PARTIAL">{t.ui.statusPartial}</SelectItem>
+        <SelectItem value="PAID">{t.ui.statusPaid}</SelectItem>
+        <SelectItem value="OVERDUE">{t.ui.statusOverdue}</SelectItem>
       </SelectContent>
     </Select>
   );

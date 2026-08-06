@@ -20,9 +20,24 @@ import {
 } from 'lucide-react';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { LowStockAlerts } from '@/components/dashboard/LowStockAlerts';
+import { getT } from '@/i18n/server';
+import type { Dictionary } from '@/i18n/dictionaries';
+
+function statusLabel(t: Dictionary, status: string) {
+  const map: Record<string, string> = {
+    PENDING: t.ui.statusPending,
+    IN_PROGRESS: t.ui.statusInProgress,
+    WAITING_PARTS: t.ui.statusWaitingParts,
+    COMPLETED: t.ui.statusCompleted,
+    DELIVERED: t.ui.statusDelivered,
+    CANCELLED: t.ui.statusCancelled,
+  };
+  return map[status] ?? status.replace(/_/g, ' ');
+}
 
 export default async function DashboardPage() {
-  const [stats, revenueTrend, recentOrders] = await Promise.all([
+  const [t, stats, revenueTrend, recentOrders] = await Promise.all([
+    getT(),
     getDashboardStats(),
     getRevenueTrend(6),
     getRecentRepairOrders(5),
@@ -30,30 +45,27 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <PageHeader
-        title="Dashboard"
-        description="Overview of your mechanic shop performance"
-      />
+      <PageHeader title={t.app.dashboard} description={t.ui.dashboardOverview} />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
-          title="Today's Revenue"
+          title={t.ui.revenueToday}
           value={formatCurrency(stats.revenueToday)}
           icon={DollarSign}
         />
         <StatCard
-          title="Monthly Revenue"
+          title={t.ui.revenueMonth}
           value={formatCurrency(stats.revenueMonth)}
           icon={TrendingUp}
         />
         <StatCard
-          title="Monthly Profit"
+          title={t.ui.profitMonth}
           value={formatCurrency(stats.profitMonth)}
-          description="From completed repairs"
+          description={t.ui.fromCompletedRepairs}
           icon={DollarSign}
         />
         <StatCard
-          title="Outstanding Balance"
+          title={t.ui.outstandingBalance}
           value={formatCurrency(stats.outstanding)}
           icon={AlertTriangle}
         />
@@ -62,7 +74,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active Repairs</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.ui.activeRepairs}</CardTitle>
             <Wrench className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
@@ -71,66 +83,56 @@ export default async function DashboardPage() {
               href="/repair-orders"
               className="text-xs text-amber-500 hover:underline"
             >
-              View all
+              {t.common.viewAll}
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.ui.totalCustomers}</CardTitle>
             <Users className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.customersCount}</div>
-            <Link
-              href="/customers"
-              className="text-xs text-amber-500 hover:underline"
-            >
-              View all
+            <Link href="/customers" className="text-xs text-amber-500 hover:underline">
+              {t.common.viewAll}
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+            <CardTitle className="text-sm font-medium">{t.ui.lowStockItems}</CardTitle>
             <Package className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.lowStockCount}</div>
-            <Link
-              href="/inventory"
-              className="text-xs text-amber-500 hover:underline"
-            >
-              Manage
+            <Link href="/inventory" className="text-xs text-amber-500 hover:underline">
+              {t.ui.manage}
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Upcoming Installments
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">{t.ui.upcomingInstallments}</CardTitle>
             <Calendar className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {formatCurrency(stats.upcomingInstallments)}
             </div>
-            <p className="text-xs text-zinc-500">Next 30 days</p>
+            <p className="text-xs text-zinc-500">{t.ui.next30Days}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">
-              Next Month Forecast
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">{t.ui.nextMonthForecast}</CardTitle>
             <TrendingUp className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {formatCurrency(stats.forecastNextMonth)}
             </div>
-            <p className="text-xs text-zinc-500">Based on current trend</p>
+            <p className="text-xs text-zinc-500">{t.ui.basedOnTrend}</p>
           </CardContent>
         </Card>
       </div>
@@ -138,8 +140,8 @@ export default async function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Revenue Trend</CardTitle>
-            <p className="text-sm text-zinc-400">Last 6 months</p>
+            <CardTitle>{t.ui.revenueTrend}</CardTitle>
+            <p className="text-sm text-zinc-400">{t.ui.last6Months}</p>
           </CardHeader>
           <CardContent>
             <RevenueChart data={revenueTrend} />
@@ -149,18 +151,18 @@ export default async function DashboardPage() {
           <LowStockAlerts />
           <Card>
             <CardHeader>
-              <CardTitle>Recent Repair Orders</CardTitle>
+              <CardTitle>{t.ui.recentRepairOrders}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {recentOrders.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center">
-                    <p className="text-sm text-zinc-500">No recent repair orders</p>
+                    <p className="text-sm text-zinc-500">{t.ui.noRecentRepairOrders}</p>
                     <Link
                       href="/repair-orders"
                       className="mt-2 inline-block text-sm font-medium text-amber-500 hover:underline"
                     >
-                      Create a repair order
+                      {t.ui.createRepairOrder}
                     </Link>
                   </div>
                 ) : (
@@ -177,11 +179,11 @@ export default async function DashboardPage() {
                           {order.vehicle.model}
                         </p>
                       </div>
-                      <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:text-right">
+                      <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:text-end">
                         <p className="font-medium">
                           {formatCurrency(Number(order.totalPrice))}
                         </p>
-                        <StatusBadge status={order.status} />
+                        <StatusBadge label={statusLabel(t, order.status)} status={order.status} />
                       </div>
                     </Link>
                   ))
@@ -195,11 +197,8 @@ export default async function DashboardPage() {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const variants: Record<
-    string,
-    'default' | 'secondary' | 'success' | 'warning'
-  > = {
+function StatusBadge({ status, label }: { status: string; label: string }) {
+  const variants: Record<string, 'default' | 'secondary' | 'success' | 'warning'> = {
     PENDING: 'secondary',
     IN_PROGRESS: 'default',
     WAITING_PARTS: 'warning',
@@ -209,7 +208,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <Badge variant={variants[status] ?? 'secondary'} className="mt-1">
-      {status.replace('_', ' ')}
+      {label}
     </Badge>
   );
 }

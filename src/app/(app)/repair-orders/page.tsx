@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/table';
 import { RepairOrdersFilter } from '@/components/repair-orders/RepairOrdersFilter';
 import { RepairOrdersSearch } from '@/components/repair-orders/RepairOrdersSearch';
+import { getT } from '@/i18n/server';
 
 export default async function RepairOrdersPage({
   searchParams,
@@ -30,7 +31,7 @@ export default async function RepairOrdersPage({
   const params = await searchParams;
   const status = params.status ?? 'all';
   const query = params.q?.toLowerCase() ?? '';
-  const { items: orders } = await getRepairOrders({ status });
+  const [t, { items: orders }] = await Promise.all([getT(), getRepairOrders({ status })]);
   const filtered = query
     ? orders.filter(
         (o) =>
@@ -45,14 +46,14 @@ export default async function RepairOrdersPage({
   return (
     <EntityFilterShell>
       <PageHeader
-        title="Repair Orders"
-        description="Manage repair jobs and track progress"
+        title={t.app.repairOrders}
+        description={t.ui.repairOrdersDesc}
         actions={
           <RepairOrderFormDialog
             trigger={
               <Button>
                 <Plus className="me-2 h-4 w-4" />
-                New Repair Order
+                {t.ui.newRepairOrder}
               </Button>
             }
           />
@@ -67,25 +68,22 @@ export default async function RepairOrdersPage({
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Wrench className="h-6 w-6" />}
-          title={query || status !== 'all' ? 'No matching orders' : 'No repair orders'}
+          title={query || status !== 'all' ? t.ui.noMatchingOrders : t.ui.noRepairOrders}
           description={
-            query || status !== 'all'
-              ? 'Try a different search or clear filters'
-              : 'Create your first repair order to get started'
+            query || status !== 'all' ? t.ui.tryClearFilters : t.ui.createFirstRepairOrder
           }
           action={
             !query && status === 'all' ? (
-              <RepairOrderFormDialog trigger={<Button>New Repair Order</Button>} />
+              <RepairOrderFormDialog trigger={<Button>{t.ui.newRepairOrder}</Button>} />
             ) : (
               <Button asChild variant="outline">
-                <Link href="/repair-orders">Clear filters</Link>
+                <Link href="/repair-orders">{t.ui.clearFilters}</Link>
               </Button>
             )
           }
         />
       ) : (
         <>
-          {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
             {filtered.map((order) => (
               <div
@@ -130,18 +128,17 @@ export default async function RepairOrdersPage({
             ))}
           </div>
 
-          {/* Desktop table */}
           <Card className="hidden md:block">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Vehicle</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Profit</TableHead>
+                    <TableHead>{t.ui.colOrder}</TableHead>
+                    <TableHead>{t.ui.colCustomer}</TableHead>
+                    <TableHead>{t.ui.colVehicle}</TableHead>
+                    <TableHead>{t.ui.colStatus}</TableHead>
+                    <TableHead className="text-right">{t.ui.colTotal}</TableHead>
+                    <TableHead className="text-right">{t.ui.colProfit}</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>

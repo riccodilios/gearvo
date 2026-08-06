@@ -15,9 +15,13 @@ import { Button } from '@/components/ui/button';
 import { Pencil, ArrowLeft, Plus, Car, Wrench, FileText, CreditCard } from 'lucide-react';
 import { PendingLink } from '@/components/ui/pending-link';
 import { DetailTabsSkeleton } from '@/components/skeletons/PageSkeletons';
+import { getT } from '@/i18n/server';
 
 async function CustomerHistoryTabs({ customerId }: { customerId: string }) {
-  const history = await getCustomerHistory(customerId);
+  const [t, history] = await Promise.all([
+    getT(),
+    getCustomerHistory(customerId),
+  ]);
   if (!history) return null;
 
   const { vehicles, repairOrders, invoices, payments } = history;
@@ -25,21 +29,21 @@ async function CustomerHistoryTabs({ customerId }: { customerId: string }) {
   return (
     <Tabs defaultValue="vehicles">
       <TabsList>
-        <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
-        <TabsTrigger value="repairs">Repairs</TabsTrigger>
-        <TabsTrigger value="invoices">Invoices</TabsTrigger>
-        <TabsTrigger value="payments">Payments</TabsTrigger>
+        <TabsTrigger value="vehicles">{t.ui.vehicles}</TabsTrigger>
+        <TabsTrigger value="repairs">{t.app.repairOrders}</TabsTrigger>
+        <TabsTrigger value="invoices">{t.app.invoices}</TabsTrigger>
+        <TabsTrigger value="payments">{t.ui.paymentHistory}</TabsTrigger>
       </TabsList>
       <TabsContent value="vehicles" className="mt-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Vehicles</CardTitle>
+            <CardTitle>{t.ui.vehicles}</CardTitle>
             <AddVehicleDialog
               customerId={customerId}
               trigger={
                 <Button size="sm" className="touch-manipulation">
                   <Plus className="me-2 h-4 w-4" />
-                  Add vehicle
+                  {t.ui.addVehicle}
                 </Button>
               }
             />
@@ -49,12 +53,12 @@ async function CustomerHistoryTabs({ customerId }: { customerId: string }) {
               <EmptyState
                 compact
                 icon={<Car className="h-5 w-5" />}
-                title="No vehicles yet"
-                description="Add a vehicle so you can open repair orders for this customer."
+                title={t.ui.noVehiclesYet}
+                description={t.ui.addVehicleHint}
                 action={
                   <AddVehicleDialog
                     customerId={customerId}
-                    trigger={<Button size="sm">Add vehicle</Button>}
+                    trigger={<Button size="sm">{t.ui.addVehicle}</Button>}
                   />
                 }
               />
@@ -87,13 +91,13 @@ async function CustomerHistoryTabs({ customerId }: { customerId: string }) {
       <TabsContent value="repairs" className="mt-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>Repair Orders</CardTitle>
+            <CardTitle>{t.app.repairOrders}</CardTitle>
             <RepairOrderFormDialog
               defaultCustomerId={customerId}
               trigger={
                 <Button size="sm" className="touch-manipulation">
                   <Plus className="me-2 h-4 w-4" />
-                  New order
+                  {t.ui.newOrder}
                 </Button>
               }
             />
@@ -103,12 +107,12 @@ async function CustomerHistoryTabs({ customerId }: { customerId: string }) {
               <EmptyState
                 compact
                 icon={<Wrench className="h-5 w-5" />}
-                title="No repair orders"
-                description="Open a job for this customer to start tracking work and billing."
+                title={t.ui.noRepairOrdersCustomer}
+                description={t.ui.noRepairOrdersCustomerHint}
                 action={
                   <RepairOrderFormDialog
                     defaultCustomerId={customerId}
-                    trigger={<Button size="sm">New repair order</Button>}
+                    trigger={<Button size="sm">{t.ui.newRepairOrder}</Button>}
                   />
                 }
               />
@@ -142,18 +146,18 @@ async function CustomerHistoryTabs({ customerId }: { customerId: string }) {
       <TabsContent value="invoices" className="mt-4">
         <Card>
           <CardHeader>
-            <CardTitle>Invoices</CardTitle>
+            <CardTitle>{t.app.invoices}</CardTitle>
           </CardHeader>
           <CardContent>
             {invoices.length === 0 ? (
               <EmptyState
                 compact
                 icon={<FileText className="h-5 w-5" />}
-                title="No invoices"
-                description="Invoices are created from completed repair orders."
+                title={t.ui.noInvoices}
+                description={t.ui.noInvoicesHint}
                 action={
                   <Button asChild size="sm" variant="outline">
-                    <Link href="/repair-orders">View repair orders</Link>
+                    <Link href="/repair-orders">{t.ui.viewRepairOrders}</Link>
                   </Button>
                 }
               />
@@ -187,15 +191,15 @@ async function CustomerHistoryTabs({ customerId }: { customerId: string }) {
       <TabsContent value="payments" className="mt-4">
         <Card>
           <CardHeader>
-            <CardTitle>Payment History</CardTitle>
+            <CardTitle>{t.ui.paymentHistory}</CardTitle>
           </CardHeader>
           <CardContent>
             {payments.length === 0 ? (
               <EmptyState
                 compact
                 icon={<CreditCard className="h-5 w-5" />}
-                title="No payments yet"
-                description="Payments appear here once you record them on an invoice."
+                title={t.ui.noPaymentsYet}
+                description={t.ui.noPaymentsHint}
               />
             ) : (
               <div className="space-y-2">
@@ -213,7 +217,7 @@ async function CustomerHistoryTabs({ customerId }: { customerId: string }) {
                       </p>
                     </div>
                     <p className="shrink-0 text-sm text-zinc-500">
-                      Invoice {p.invoice.invoiceNumber}
+                      {t.ui.invoiceLabel} {p.invoice.invoiceNumber}
                     </p>
                   </div>
                 ))}
@@ -232,7 +236,7 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const customer = await getCustomerProfile(id);
+  const [t, customer] = await Promise.all([getT(), getCustomerProfile(id)]);
   if (!customer) notFound();
 
   return (
@@ -242,11 +246,11 @@ export default async function CustomerDetailPage({
         className="inline-flex min-h-10 items-center gap-2 text-sm text-zinc-400 hover:text-amber-500"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Customers
+        {t.ui.backToCustomers}
       </PendingLink>
       <PageHeader
         title={customer.fullName}
-        description="Customer profile and history"
+        description={t.ui.customerProfileDesc}
         actions={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <RepairOrderFormDialog
@@ -254,7 +258,7 @@ export default async function CustomerDetailPage({
               trigger={
                 <Button className="w-full touch-manipulation sm:w-auto">
                   <Plus className="me-2 h-4 w-4" />
-                  New repair order
+                  {t.ui.newRepairOrder}
                 </Button>
               }
             />
@@ -271,7 +275,7 @@ export default async function CustomerDetailPage({
               trigger={
                 <Button variant="outline" className="w-full touch-manipulation sm:w-auto">
                   <Pencil className="me-2 h-4 w-4" />
-                  Edit
+                  {t.app.edit}
                 </Button>
               }
             />
@@ -282,7 +286,7 @@ export default async function CustomerDetailPage({
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-400">Total Spent</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-400">{t.ui.totalSpent}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xl font-bold tabular-nums text-emerald-500 sm:text-2xl">
@@ -293,7 +297,7 @@ export default async function CustomerDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
-              Outstanding
+              {t.ui.outstanding}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -304,7 +308,7 @@ export default async function CustomerDetailPage({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-400">Vehicles</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-400">{t.ui.vehicles}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xl font-bold sm:text-2xl">{customer._count.vehicles}</p>
@@ -312,7 +316,7 @@ export default async function CustomerDetailPage({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-400">Repair Orders</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-400">{t.app.repairOrders}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xl font-bold sm:text-2xl">{customer._count.repairOrders}</p>
@@ -322,12 +326,12 @@ export default async function CustomerDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Contact Info</CardTitle>
+          <CardTitle>{t.ui.contactInfo}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {customer.phone && (
             <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-              <span className="w-20 shrink-0 text-zinc-500">Phone</span>
+              <span className="w-20 shrink-0 text-zinc-500">{t.ui.phone}</span>
               <a href={`tel:${customer.phone}`} className="font-medium text-amber-500 hover:underline">
                 {customer.phone}
               </a>
@@ -335,7 +339,7 @@ export default async function CustomerDetailPage({
           )}
           {customer.email && (
             <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-              <span className="w-20 shrink-0 text-zinc-500">Email</span>
+              <span className="w-20 shrink-0 text-zinc-500">{t.ui.email}</span>
               <a
                 href={`mailto:${customer.email}`}
                 className="break-all font-medium text-amber-500 hover:underline"
@@ -346,12 +350,12 @@ export default async function CustomerDetailPage({
           )}
           {customer.address && (
             <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-              <span className="w-20 shrink-0 text-zinc-500">Address</span>
+              <span className="w-20 shrink-0 text-zinc-500">{t.ui.address}</span>
               <span className="text-zinc-200">{customer.address}</span>
             </div>
           )}
           {!customer.phone && !customer.email && !customer.address && (
-            <p className="text-zinc-500">No contact details on file.</p>
+            <p className="text-zinc-500">{t.ui.noContactDetails}</p>
           )}
           {customer.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">

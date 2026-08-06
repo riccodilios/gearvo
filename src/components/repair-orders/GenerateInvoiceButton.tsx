@@ -19,6 +19,7 @@ import { createInvoiceFromRepairOrder } from '@/app/actions/invoices';
 import { formError } from '@/lib/form-error';
 import { toast } from '@/lib/mutation-toast';
 import { useSubmitGuard } from '@/hooks/use-submit-guard';
+import { useI18n } from '@/i18n/provider';
 
 interface GenerateInvoiceButtonProps {
   repairOrderId: string;
@@ -29,6 +30,7 @@ export function GenerateInvoiceButton({
   repairOrderId,
   hasInvoice,
 }: GenerateInvoiceButtonProps) {
+  const { t } = useI18n();
   const { loading, run } = useSubmitGuard();
   const [done, setDone] = useState(hasInvoice);
   const [open, setOpen] = useState(false);
@@ -42,7 +44,7 @@ export function GenerateInvoiceButton({
         const invoice = await createInvoiceFromRepairOrder(repairOrderId);
         setDone(true);
         setOpen(false);
-        toast.success('Invoice created');
+        toast.success(t.ui.invoiceCreated);
         router.refresh();
         router.push(`/invoices/${invoice.id}`);
       } catch (err) {
@@ -56,20 +58,17 @@ export function GenerateInvoiceButton({
       <AlertDialogTrigger asChild>
         <Button variant="outline" size="sm" disabled={loading} className="touch-manipulation">
           <FileText className="me-1 h-3 w-3" />
-          {loading ? 'Generating…' : 'Invoice'}
+          {loading ? t.ui.generating : t.ui.invoiceBtn}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Create invoice?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This creates an invoice from the repair order totals. You can record
-            payments afterward. Continue?
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t.ui.createInvoiceTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{t.ui.createInvoiceDesc}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel className="w-full sm:w-auto" disabled={loading}>
-            Not now
+            {t.ui.notNow}
           </AlertDialogCancel>
           <AlertDialogAction
             className="w-full sm:w-auto"
@@ -79,7 +78,7 @@ export function GenerateInvoiceButton({
               handleConfirm();
             }}
           >
-            {loading ? 'Creating…' : 'Create invoice'}
+            {loading ? t.ui.creating : t.ui.createInvoice}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

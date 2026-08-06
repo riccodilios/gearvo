@@ -11,6 +11,15 @@ import {
   InstallmentPlanDialog,
   MarkInstallmentPaidButton,
 } from '@/components/invoices/InstallmentPlanDialog';
+import { getT } from '@/i18n/server';
+
+const INVOICE_STATUS_KEYS = {
+  PAID: 'statusPaid',
+  PARTIAL: 'statusPartial',
+  OVERDUE: 'statusOverdue',
+  UNPAID: 'statusUnpaid',
+  DRAFT: 'statusDraft',
+} as const;
 
 export default async function InvoiceDetailPage({
   params,
@@ -21,15 +30,20 @@ export default async function InvoiceDetailPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const invoice = await getInvoice(id);
+  const [t, invoice] = await Promise.all([getT(), getInvoice(id)]);
   if (!invoice) notFound();
   const openPay = sp.pay === '1' && invoice.status !== 'PAID';
+
+  const statusLabel = (status: string) => {
+    const key = INVOICE_STATUS_KEYS[status as keyof typeof INVOICE_STATUS_KEYS];
+    return key ? t.ui[key] : status;
+  };
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title={`Invoice ${invoice.invoiceNumber}`}
-        description={`Customer: ${invoice.customer.fullName}`}
+        title={t.ui.invoiceTitle.replace('{number}', invoice.invoiceNumber)}
+        description={t.ui.customerPrefix.replace('{name}', invoice.customer.fullName)}
         actions={
           <div className="flex flex-wrap gap-2">
             {invoice.status !== 'PAID' && (
@@ -37,14 +51,14 @@ export default async function InvoiceDetailPage({
                 invoiceId={invoice.id}
                 remainingBalance={Number(invoice.remainingBalance)}
                 defaultOpen={openPay}
-                trigger={<Button>Record Payment</Button>}
+                trigger={<Button>{t.ui.recordPayment}</Button>}
               />
             )}
             {invoice.status !== 'PAID' && Number(invoice.remainingBalance) > 0 && (
               <InstallmentPlanDialog
                 invoiceId={invoice.id}
                 remainingBalance={Number(invoice.remainingBalance)}
-                trigger={<Button variant="outline">Installment plan</Button>}
+                trigger={<Button variant="outline">{t.ui.installmentPlan}</Button>}
               />
             )}
           </div>
@@ -55,7 +69,7 @@ export default async function InvoiceDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
-              Total Amount
+              {t.ui.totalAmount}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -67,7 +81,7 @@ export default async function InvoiceDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
-              Paid
+              {t.ui.colPaid}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -79,7 +93,7 @@ export default async function InvoiceDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
-              Balance
+              {t.ui.colBalance}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -91,7 +105,7 @@ export default async function InvoiceDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
-              Status
+              {t.ui.colStatus}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -100,7 +114,7 @@ export default async function InvoiceDetailPage({
                 invoice.status === 'PAID' ? 'success' : 'warning'
               }
             >
-              {invoice.status}
+              {statusLabel(invoice.status)}
             </Badge>
           </CardContent>
         </Card>
@@ -108,10 +122,10 @@ export default async function InvoiceDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Invoice Items</CardTitle>
+          <CardTitle>{t.ui.invoiceItems}</CardTitle>
           {invoice.dueDate && (
             <p className="text-sm text-zinc-400">
-              Due: {formatDate(invoice.dueDate)}
+              {t.ui.dueColon.replace('{date}', formatDate(invoice.dueDate))}
             </p>
           )}
         </CardHeader>
@@ -139,11 +153,11 @@ export default async function InvoiceDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Payment History</CardTitle>
+          <CardTitle>{t.ui.paymentHistory}</CardTitle>
         </CardHeader>
         <CardContent>
           {invoice.payments.length === 0 ? (
-            <p className="text-sm text-zinc-500">No payments yet</p>
+            <p className="text-sm text-zinc-500">{t.ui.noPaymentsYet}</p>
           ) : (
             <div className="space-y-2">
               {invoice.payments.map((payment) => (
@@ -173,7 +187,7 @@ export default async function InvoiceDetailPage({
       {invoice.installments.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Installment Plan</CardTitle>
+            <CardTitle>{t.ui.installmentPlan}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -187,12 +201,12 @@ export default async function InvoiceDetailPage({
                       {formatCurrency(Number(inst.amount))}
                     </p>
                     <p className="text-sm text-zinc-500">
-                      Due: {formatDate(inst.dueDate)}
+                      {t.ui.dueColon.replace('{date}', formatDate(inst.dueDate))}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={inst.status === 'PAID' ? 'success' : 'warning'}>
-                      {inst.status}
+                      {statusLabel(inst.status)}
                     </Badge>
                     {inst.status !== 'PAID' && (
                       <MarkInstallmentPaidButton installmentId={inst.id} />

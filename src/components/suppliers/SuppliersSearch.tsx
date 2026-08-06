@@ -6,8 +6,10 @@ import { Search } from 'lucide-react';
 import { useCallback, useTransition } from 'react';
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/provider';
 
 export function SuppliersSearch() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -40,7 +42,7 @@ export function SuppliersSearch() {
     >
       <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
       <Input
-        placeholder="Search by name or contact person..."
+        placeholder={t.ui.searchSuppliers}
         defaultValue={searchParams.get('q') ?? ''}
         onChange={(e) => pushSearch(e.target.value)}
         className="ps-9"

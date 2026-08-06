@@ -15,7 +15,6 @@ import {
   CreditCard,
   CheckCircle2,
   ArrowRight,
-  Star,
 } from 'lucide-react';
 import { useI18n } from '@/i18n/provider';
 import { GearvoMark } from '@/components/brand/GearvoLogo';
@@ -64,19 +63,25 @@ function FadeIn({
   );
 }
 
-function ProductMockup({ tab }: { tab: string }) {
+function ProductMockup({ tab, ar }: { tab: string; ar: boolean }) {
+  const nav = ar
+    ? ['لوحة التحكم', 'العملاء', 'الإصلاحات', 'المخزون', 'الفواتير']
+    : ['Dashboard', 'Customers', 'Repairs', 'Inventory', 'Invoices'];
   const panels: Record<string, ReactNode> = {
     dashboard: (
       <>
         <div className="grid grid-cols-3 gap-2">
           {[
-            ['Today', '12,480'],
-            ['Month', '186,920'],
-            ['Outstanding', '24,350'],
+            [ar ? 'اليوم' : 'Today', '12,480'],
+            [ar ? 'الشهر' : 'Month', '186,920'],
+            [ar ? 'المستحق' : 'Outstanding', '24,350'],
           ].map(([l, v]) => (
             <div key={l} className="rounded-lg border border-zinc-800 bg-zinc-900/80 p-3">
               <p className="text-[10px] uppercase tracking-wide text-zinc-500">{l}</p>
-              <p className="mt-1 font-semibold text-amber-400">{v} <span className="text-[10px] text-zinc-500">SAR</span></p>
+              <p className="mt-1 font-semibold text-amber-400">
+                {v}{' '}
+                <span className="text-[10px] text-zinc-500">{ar ? 'ر.س' : 'SAR'}</span>
+              </p>
             </div>
           ))}
         </div>
@@ -96,9 +101,9 @@ function ProductMockup({ tab }: { tab: string }) {
     repairs: (
       <div className="space-y-2">
         {[
-          ['RO-10482', 'Toyota Camry · Oil service', 'IN_PROGRESS', 'bg-amber-500/10 text-amber-400'],
-          ['RO-10479', 'Lexus LX · Brake pads', 'COMPLETED', 'bg-emerald-500/10 text-emerald-400'],
-          ['RO-10471', 'Nissan Patrol · Diagnostics', 'PENDING', 'bg-zinc-500/10 text-zinc-400'],
+          ['RO-10482', ar ? 'تويوتا كامري · تغيير زيت' : 'Toyota Camry · Oil service', ar ? 'قيد التنفيذ' : 'IN_PROGRESS', 'bg-amber-500/10 text-amber-400'],
+          ['RO-10479', ar ? 'لكزس LX · فحمات فرامل' : 'Lexus LX · Brake pads', ar ? 'مكتمل' : 'COMPLETED', 'bg-emerald-500/10 text-emerald-400'],
+          ['RO-10471', ar ? 'نيسان باترول · تشخيص' : 'Nissan Patrol · Diagnostics', ar ? 'قيد الانتظار' : 'PENDING', 'bg-zinc-500/10 text-zinc-400'],
         ].map(([id, desc, st, badge]) => (
           <div key={id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2.5">
             <div>
@@ -115,15 +120,15 @@ function ProductMockup({ tab }: { tab: string }) {
     inventory: (
       <div className="space-y-2">
         {[
-          ['Engine Oil 5W-30', '142', 'ok'],
-          ['Brake Pads Front', '8', 'low'],
-          ['Cabin Filter', '64', 'ok'],
-          ['Battery 70Ah', '3', 'low'],
+          [ar ? 'زيت محرك 5W-30' : 'Engine Oil 5W-30', '142', 'ok'],
+          [ar ? 'فحمات أمامية' : 'Brake Pads Front', '8', 'low'],
+          [ar ? 'فلتر مقصورة' : 'Cabin Filter', '64', 'ok'],
+          [ar ? 'بطارية 70Ah' : 'Battery 70Ah', '3', 'low'],
         ].map(([name, qty, state]) => (
           <div key={name} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2">
             <p className="text-xs text-zinc-300">{name}</p>
             <p className={`text-xs font-semibold ${state === 'low' ? 'text-red-400' : 'text-emerald-400'}`}>
-              {qty} units
+              {qty} {ar ? 'وحدة' : 'units'}
             </p>
           </div>
         ))}
@@ -132,10 +137,10 @@ function ProductMockup({ tab }: { tab: string }) {
     finance: (
       <div className="space-y-2">
         {[
-          ['INV-2091', 'Paid', '3,450'],
-          ['INV-2088', 'Partial', '1,200 / 4,800'],
-          ['INV-2074', 'Overdue', '2,150'],
-          ['Plan · Al-Otaibi', '3 left', '900 / mo'],
+          ['INV-2091', ar ? 'مدفوع' : 'Paid', '3,450'],
+          ['INV-2088', ar ? 'جزئي' : 'Partial', '1,200 / 4,800'],
+          ['INV-2074', ar ? 'متأخر' : 'Overdue', '2,150'],
+          [ar ? 'خطة · العتيبي' : 'Plan · Al-Otaibi', ar ? '٣ متبقي' : '3 left', ar ? '٩٠٠ / شهر' : '900 / mo'],
         ].map(([a, b, c]) => (
           <div key={a} className="grid grid-cols-3 gap-2 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-xs">
             <span className="text-zinc-300">{a}</span>
@@ -162,7 +167,7 @@ function ProductMockup({ tab }: { tab: string }) {
       </div>
       <div className="grid gap-0 md:grid-cols-[140px_1fr]">
         <aside className="hidden border-e border-zinc-800 bg-zinc-900/40 p-3 md:block">
-          {['Dashboard', 'Customers', 'Repairs', 'Inventory', 'Invoices'].map((item, i) => (
+          {nav.map((item, i) => (
             <div
               key={item}
               className={`mb-1 rounded-md px-2 py-1.5 text-[11px] ${
@@ -375,30 +380,6 @@ export function LandingPage() {
     },
   ];
 
-  const testimonials = [
-    {
-      quote: ar
-        ? 'خلال أسبوع عرفنا ربح كل أمر إصلاح، وما عاد المخزون يُدار بالتخمين.'
-        : 'Within a week we could see profit per job — inventory stopped being a guessing game.',
-      name: ar ? 'فهد العتيبي' : 'Fahad Al-Otaibi',
-      role: ar ? 'مالك · ورشة النخبة، الرياض' : 'Owner · Elite Auto, Riyadh',
-    },
-    {
-      quote: ar
-        ? 'الفرعان يعملان بنفس النظام دون اختلاط بيانات. المدراء يرون الصورة الكاملة.'
-        : 'Two branches, one system, zero data bleed. Managers finally see the whole picture.',
-      name: ar ? 'نورة القحطاني' : 'Noura Al-Qahtani',
-      role: ar ? 'مديرة عمليات · جدة' : 'Ops Manager · Jeddah',
-    },
-    {
-      quote: ar
-        ? 'الأقساط صارت واضحة للكاشير والعميل. المتأخرات لم تعد تُنسى في واتساب.'
-        : 'Installments are clear for cashiers and customers. Overdues no longer live in WhatsApp threads.',
-      name: ar ? 'خالد المنصوري' : 'Khalid Al-Mansouri',
-      role: ar ? 'مدير فرع · الدمام' : 'Branch Manager · Dammam',
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_rgba(245,158,11,0.10),_transparent_50%),radial-gradient(ellipse_at_bottom_right,_rgba(39,39,42,0.8),_transparent_45%)]" />
@@ -451,7 +432,7 @@ export function LandingPage() {
           </div>
           <FadeIn className="relative">
             <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-amber-500/20 via-transparent to-transparent blur-2xl" />
-            <ProductMockup tab="dashboard" />
+            <ProductMockup tab="dashboard" ar={ar} />
           </FadeIn>
         </div>
       </section>
@@ -507,7 +488,7 @@ export function LandingPage() {
             ))}
           </div>
           <FadeIn className="mt-8" delay={80}>
-            <ProductMockup tab={tab} />
+            <ProductMockup tab={tab} ar={ar} />
           </FadeIn>
         </div>
       </section>
@@ -517,21 +498,25 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <FadeIn>
             <p className="text-sm font-medium text-amber-500">{ar ? 'الميزات' : 'Core features'}</p>
-            <h2 className="font-display mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
+            <h2 className="font-display mt-2 text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
               {ar ? 'مصمم لعمليات الورشة الحقيقية' : 'Built for real workshop operations'}
             </h2>
           </FadeIn>
-          <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid grid-cols-2 gap-4 sm:mt-14 sm:gap-10 lg:grid-cols-3">
             {FEATURE_BLOCKS.map((f, i) => {
               const copy = ar ? f.ar : f.en;
               return (
                 <FadeIn key={f.id} delay={i * 40}>
                   <div className="group">
-                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-amber-400 transition group-hover:border-amber-500/40">
-                      <f.icon className="h-5 w-5" />
+                    <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-amber-400 transition group-hover:border-amber-500/40 sm:mb-4 sm:h-10 sm:w-10 sm:rounded-xl">
+                      <f.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
-                    <h3 className="text-lg font-semibold text-zinc-50">{copy.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-zinc-400">{copy.body}</p>
+                    <h3 className="text-sm font-semibold leading-snug text-zinc-50 sm:text-lg">
+                      {copy.title}
+                    </h3>
+                    <p className="mt-1.5 text-xs leading-relaxed text-zinc-400 sm:mt-2 sm:text-sm">
+                      {copy.body}
+                    </p>
                   </div>
                 </FadeIn>
               );
@@ -570,39 +555,6 @@ export function LandingPage() {
                 <h3 className="font-semibold text-zinc-50">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="border-t border-zinc-900 py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <FadeIn>
-            <h2 className="font-display text-3xl font-bold tracking-tight">
-              {ar ? 'يثق به أصحاب الورش' : 'Trusted by workshop leaders'}
-            </h2>
-            <p className="mt-2 text-sm text-zinc-500">
-              {ar ? 'آراء توضيحية لأغراض العرض' : 'Illustrative testimonials for presentations'}
-            </p>
-          </FadeIn>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {testimonials.map((t) => (
-              <blockquote
-                key={t.name}
-                className="flex flex-col rounded-2xl border border-zinc-800 bg-zinc-950/50 p-6"
-              >
-                <div className="mb-3 flex gap-0.5 text-amber-500">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="h-3.5 w-3.5 fill-current" />
-                  ))}
-                </div>
-                <p className="flex-1 text-sm leading-relaxed text-zinc-300">&ldquo;{t.quote}&rdquo;</p>
-                <footer className="mt-6 border-t border-zinc-800 pt-4">
-                  <p className="text-sm font-medium text-zinc-100">{t.name}</p>
-                  <p className="text-xs text-zinc-500">{t.role}</p>
-                </footer>
-              </blockquote>
             ))}
           </div>
         </div>

@@ -85,12 +85,20 @@ export function ContactContent() {
   return (
     <Shell title={t.pages.contact.title}>
       <p className="max-w-2xl text-lg leading-relaxed text-zinc-400">{t.pages.contact.body}</p>
-      <a
-        href={`mailto:${t.pages.contact.email}`}
-        className="mt-6 inline-block text-amber-500 hover:underline"
-      >
-        {t.pages.contact.email}
-      </a>
+      <div className="mt-8 flex flex-wrap gap-3">
+        <Link
+          href="/book-demo"
+          className="inline-block rounded-lg bg-amber-600 px-5 py-3 font-medium text-white hover:bg-amber-500"
+        >
+          {t.nav.bookDemo}
+        </Link>
+        <Link
+          href="/free-trial"
+          className="inline-block rounded-lg border border-zinc-700 px-5 py-3 font-medium text-zinc-200 hover:bg-zinc-900"
+        >
+          {t.nav.freeTrial}
+        </Link>
+      </div>
     </Shell>
   );
 }

@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import { useRouter } from 'next/navigation';
 import { getDictionary, type Locale } from '@/i18n/dictionaries';
 
 type I18nContextValue = {
@@ -45,6 +46,11 @@ function applyDocumentLocale(locale: Locale) {
   document.documentElement.lang = locale;
   document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
   document.documentElement.classList.toggle('locale-ar', locale === 'ar');
+  try {
+    document.cookie = `gearvo-locale=${locale};path=/;max-age=31536000;samesite=lax`;
+  } catch {
+    // ignore
+  }
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -82,6 +88,8 @@ export function useI18n() {
 
 export function LanguageSwitcher({ className }: { className?: string } = {}) {
   const { locale, setLocale, t } = useI18n();
+  const router = useRouter();
+
   return (
     <div
       className={`flex gap-0.5 rounded-full border border-zinc-800/80 bg-zinc-900/80 p-0.5 text-[10px] backdrop-blur sm:gap-1 sm:rounded-lg sm:p-1 sm:text-xs ${className ?? ''}`}
@@ -91,14 +99,20 @@ export function LanguageSwitcher({ className }: { className?: string } = {}) {
       <button
         type="button"
         className={`rounded-full px-1.5 py-1 font-medium touch-manipulation sm:rounded sm:px-2.5 sm:py-1.5 ${locale === 'en' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
-        onClick={() => setLocale('en')}
+        onClick={() => {
+          setLocale('en');
+          router.refresh();
+        }}
       >
         EN
       </button>
       <button
         type="button"
         className={`rounded-full px-1.5 py-1 font-medium touch-manipulation sm:rounded sm:px-2.5 sm:py-1.5 ${locale === 'ar' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
-        onClick={() => setLocale('ar')}
+        onClick={() => {
+          setLocale('ar');
+          router.refresh();
+        }}
       >
         ع
       </button>

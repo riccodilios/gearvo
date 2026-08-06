@@ -8,26 +8,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AddMemberForm } from '@/components/employees/AddMemberForm';
 import { UserCog } from 'lucide-react';
-
-const ROLE_LABELS: Record<string, string> = {
-  OWNER: 'Owner',
-  COMPANY_MANAGER: 'Company manager',
-  BRANCH_MANAGER: 'Branch manager',
-  TECHNICIAN: 'Technician',
-  RECEPTIONIST: 'Receptionist',
-  ACCOUNTANT: 'Accountant',
-  VIEWER: 'Viewer',
-};
+import { getT } from '@/i18n/server';
 
 export default async function EmployeesPage() {
   await gatePage('members:manage', FeatureModule.EMPLOYEES);
-  const [team, branches] = await Promise.all([getTeamUsers(), listBranches()]);
+  const [t, team, branches] = await Promise.all([
+    getT(),
+    getTeamUsers(),
+    listBranches(),
+  ]);
+
+  const ROLE_LABELS: Record<string, string> = {
+    OWNER: t.ui.roleOwner,
+    COMPANY_MANAGER: t.ui.roleCompanyManager,
+    BRANCH_MANAGER: t.ui.roleBranchManager,
+    TECHNICIAN: t.ui.roleTechnician,
+    RECEPTIONIST: t.ui.roleReceptionist,
+    ACCOUNTANT: t.ui.roleAccountant,
+    VIEWER: t.ui.roleViewer,
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <PageHeader
-        title="Employees"
-        description="Manage memberships and roles across branches"
+        title={t.app.employees}
+        description={t.ui.employeesDesc}
       />
 
       <AddMemberForm
@@ -36,15 +41,15 @@ export default async function EmployeesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Team directory</CardTitle>
+          <CardTitle>{t.ui.teamDirectory}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {team.length === 0 ? (
             <EmptyState
               compact
               icon={<UserCog className="h-5 w-5" />}
-              title="No team members yet"
-              description="Invite staff with the form above so they can access this branch."
+              title={t.ui.noTeamMembers}
+              description={t.ui.inviteStaffHint}
             />
           ) : (
             team.map((m) => (
@@ -58,7 +63,7 @@ export default async function EmployeesPage() {
                 </div>
                 <Badge variant="secondary" className="w-fit max-w-full truncate">
                   {ROLE_LABELS[m.role] ?? m.role.replace(/_/g, ' ')}
-                  {m.branch ? ` · ${m.branch.name}` : ' · Company-wide'}
+                  {m.branch ? ` · ${m.branch.name}` : ` · ${t.ui.companyWide}`}
                 </Badge>
               </div>
             ))

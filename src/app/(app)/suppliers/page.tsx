@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SupplierFormDialog } from '@/components/suppliers/SupplierFormDialog';
 import { SupplierCard } from '@/components/suppliers/SupplierCard';
 import { SuppliersSearch } from '@/components/suppliers/SuppliersSearch';
+import { getT } from '@/i18n/server';
 
 export default async function SuppliersPage({
   searchParams,
@@ -14,20 +15,23 @@ export default async function SuppliersPage({
 }) {
   const params = await searchParams;
   const query = params.q ?? '';
-  const { items: suppliers } = await getSuppliers({ q: query });
+  const [t, { items: suppliers }] = await Promise.all([
+    getT(),
+    getSuppliers({ q: query }),
+  ]);
   const filtered = suppliers;
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Suppliers"
-        description="Manage parts suppliers"
+        title={t.app.suppliers}
+        description={t.ui.suppliersDesc}
         actions={
           <SupplierFormDialog
             trigger={
               <Button>
                 <Plus className="me-2 h-4 w-4" />
-                Add Supplier
+                {t.ui.addSupplier}
               </Button>
             }
           />
@@ -39,15 +43,13 @@ export default async function SuppliersPage({
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Package className="h-6 w-6" />}
-          title={query ? 'No suppliers found' : 'No suppliers yet'}
+          title={query ? t.ui.noSuppliersFound : t.ui.noSuppliersYet}
           description={
-            query
-              ? 'Try a different search term'
-              : 'Add your first supplier to order parts'
+            query ? t.ui.tryDifferentSearch : t.ui.addFirstSupplier
           }
           action={
             !query && (
-              <SupplierFormDialog trigger={<Button>Add Supplier</Button>} />
+              <SupplierFormDialog trigger={<Button>{t.ui.addSupplier}</Button>} />
             )
           }
         />
