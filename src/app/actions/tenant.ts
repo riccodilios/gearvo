@@ -1,7 +1,6 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { auth } from '@clerk/nextjs/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { env } from '@/server/env';
@@ -67,16 +66,13 @@ export async function createCompanyWorkspace(
 
     if (!user) {
       if (env.clerkConfigured) {
-        const session = await auth();
-        if (!session.userId) {
-          return { error: 'You must sign in before creating a company.' };
-        }
-        user = await ensurePrismaUser();
-      } else if (env.allowDevBypass) {
-        return { error: 'Dev bypass cannot create production shops. Configure Clerk.' };
-      } else {
-        return { error: 'Authentication required.' };
+        // ensurePrismaUser already swallowed Clerk auth errors; treat as signed out.
+        return { error: 'You must sign in before creating a company.' };
       }
+      if (env.allowDevBypass) {
+        return { error: 'Dev bypass cannot create production shops. Configure Clerk.' };
+      }
+      return { error: 'Authentication required.' };
     }
 
     if (!user) return { error: 'Could not resolve user. Sign in, then try again.' };

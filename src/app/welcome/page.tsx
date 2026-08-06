@@ -1,7 +1,5 @@
 import { redirect } from 'next/navigation';
-import { auth } from '@clerk/nextjs/server';
 import { ensurePrismaUser, getWorkspaceContext } from '@/server/auth';
-import { env } from '@/server/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,21 +8,28 @@ export const dynamic = 'force-dynamic';
  * - signed out → sign-in
  * - signed in, no real/demo workspace → setup
  * - signed in with workspace → dashboard
+ *
+ * Uses ensurePrismaUser (which wraps Clerk auth() in try/catch) so a missing
+ * Clerk "dev browser" cookie on Netlify does not 500 the page.
  */
 export default async function WelcomeContinuePage() {
-  if (env.clerkConfigured) {
-    const session = await auth();
-    if (!session.userId) {
-      redirect('/sign-in');
+  let user = null;
+  let ctx = null;
+  try {
+    user = await ensurePrismaUser();
+    if (user) {
+      ctx = await getWorkspaceContext();
     }
+  } catch (err) {
+    // Never surface opaque RSC digests for auth/DB blips — send user somewhere recoverable.
+    console.error('[welcome] post-auth routing failed:', err);
+    redirect('/sign-in');
   }
 
-  const user = await ensurePrismaUser();
   if (!user) {
     redirect('/sign-in');
   }
 
-  const ctx = await getWorkspaceContext();
   if (!ctx) {
     redirect('/welcome/setup');
   }

@@ -53,7 +53,12 @@ export async function ensurePrismaUser(): Promise<User | null> {
   if (user) return user;
 
   if (env.clerkConfigured) {
-    const cu = await currentUser();
+    let cu: Awaited<ReturnType<typeof currentUser>> = null;
+    try {
+      cu = await currentUser();
+    } catch {
+      return null;
+    }
     if (!cu) return null;
     const email =
       cu.emailAddresses.find((e) => e.id === cu.primaryEmailAddressId)?.emailAddress ??
