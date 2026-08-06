@@ -4,8 +4,34 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
-import { clearAuthBridge, resolvePostAuthDestination } from '@/app/actions/post-auth';
 import { Button } from '@/components/ui/button';
+
+type ContinueResult = {
+  destination: '/sign-in' | '/welcome/setup' | '/dashboard';
+  error?: string;
+};
+
+async function continueAfterAuth(sessionToken: string | null): Promise<ContinueResult> {
+  if (!sessionToken) {
+    return { destination: '/sign-in', error: 'Missing Clerk session token.' };
+  }
+  const res = await fetch('/api/auth/continue', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${sessionToken}` },
+    credentials: 'same-origin',
+  });
+  const data = (await res.json().catch(() => ({}))) as ContinueResult;
+  return {
+    destination: data.destination || '/sign-in',
+    error: data.error,
+  };
+}
+
+async function clearBridge() {
+  await fetch('/api/auth/continue', { method: 'DELETE', credentials: 'same-origin' }).catch(
+    () => undefined
+  );
+}
 
 function hasClerkHandshakeParams() {
   if (typeof window === 'undefined') return false;
@@ -27,7 +53,7 @@ export function WelcomeContinueClient() {
 
   const finish = async () => {
     const sessionToken = await getToken().catch(() => null);
-    const result = await resolvePostAuthDestination(sessionToken);
+    const result = await continueAfterAuth(sessionToken);
     if (result.error && result.destination === '/sign-in') {
       setError(result.error);
       setMessage('Sign-in incomplete');
@@ -60,12 +86,6 @@ export function WelcomeContinueClient() {
     })().catch((err) => {
       console.error(err);
       if (!cancelled) {
-        const msg = err instanceof Error ? err.message : String(err);
-        // Client JS from an older deploy calling a new build → hard reload once.
-        if (msg.includes('Server Action') || msg.includes('UnrecognizedAction')) {
-          window.location.reload();
-          return;
-        }
         setError('Something went wrong finishing sign-in.');
         setMessage('Sign-in incomplete');
       }
@@ -74,7 +94,7 @@ export function WelcomeContinueClient() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when signed in
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isSignedIn, router]);
 
   return (
@@ -101,7 +121,7 @@ export function WelcomeContinueClient() {
               type="button"
               variant="outline"
               onClick={() => {
-                void clearAuthBridge().finally(() => signOut({ redirectUrl: '/sign-in' }));
+                void clearBridge().finally(() => signOut({ redirectUrl: '/sign-in' }));
               }}
             >
               Sign out

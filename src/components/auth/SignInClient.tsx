@@ -7,7 +7,6 @@ import { SignIn, SignedIn, SignedOut, useAuth, useClerk, useUser } from '@clerk/
 import { AuthChrome } from '@/components/i18n/AuthChrome';
 import { useI18n } from '@/i18n/provider';
 import { Button } from '@/components/ui/button';
-import { clearAuthBridge, resolvePostAuthDestination } from '@/app/actions/post-auth';
 
 const appearance = {
   variables: {
@@ -27,6 +26,21 @@ const appearance = {
 
 const DEMO_EMAILS = new Set(['demo.owner@gearvo.app', 'demo.manager@gearvo.app']);
 
+async function continueAfterAuth(sessionToken: string | null) {
+  if (!sessionToken) {
+    return { destination: '/sign-in' as const, error: 'Missing Clerk session token.' };
+  }
+  const res = await fetch('/api/auth/continue', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${sessionToken}` },
+    credentials: 'same-origin',
+  });
+  return (await res.json()) as {
+    destination: '/sign-in' | '/welcome/setup' | '/dashboard';
+    error?: string;
+  };
+}
+
 function AlreadySignedIn() {
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -42,7 +56,7 @@ function AlreadySignedIn() {
     setError(null);
     startTransition(async () => {
       const sessionToken = await getToken().catch(() => null);
-      const result = await resolvePostAuthDestination(sessionToken);
+      const result = await continueAfterAuth(sessionToken);
       if (result.error && result.destination === '/sign-in') {
         setError(result.error);
         return;
@@ -53,7 +67,9 @@ function AlreadySignedIn() {
 
   const handleSignOut = () => {
     startTransition(async () => {
-      await clearAuthBridge();
+      await fetch('/api/auth/continue', { method: 'DELETE', credentials: 'same-origin' }).catch(
+        () => undefined
+      );
       await signOut({ redirectUrl: '/sign-in' });
     });
   };
@@ -73,12 +89,7 @@ function AlreadySignedIn() {
       )}
       {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
       <div className="mt-6 flex flex-col gap-2">
-        <Button
-          type="button"
-          className="w-full"
-          disabled={pending}
-          onClick={handleSignOut}
-        >
+        <Button type="button" className="w-full" disabled={pending} onClick={handleSignOut}>
           {locale === 'ar' ? 'تسجيل الخروج ثم تسجيل الدخول' : 'Sign out, then sign in'}
         </Button>
         {!isDemo && (
@@ -116,6 +127,7 @@ export function SignInClient() {
           key={locale}
           appearance={appearance}
           fallbackRedirectUrl="/welcome"
+          forceRedirectUrl="/welcome"
           signUpUrl="/sign-up"
         />
       </SignedOut>

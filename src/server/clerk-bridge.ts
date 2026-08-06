@@ -1,44 +1,28 @@
-import { createHmac, timingSafeEqual } from 'crypto';
 import { cookies } from 'next/headers';
 import { verifyToken, createClerkClient } from '@clerk/backend';
+import {
+  AUTH_BRIDGE_COOKIE,
+  BRIDGE_MAX_AGE_SEC,
+  createAuthBridgeValue,
+  readAuthBridgeClerkId,
+} from '@/server/auth-bridge-cookie';
 
-/** HttpOnly bridge so Netlify can trust a Clerk session when Clerk cookies do not propagate. */
-export const AUTH_BRIDGE_COOKIE = 'gearvo-auth';
-const BRIDGE_MAX_AGE_SEC = 60 * 60 * 24 * 14; // 14 days
+export { AUTH_BRIDGE_COOKIE, readAuthBridgeClerkId, createAuthBridgeValue };
 
-function signingKey() {
-  return process.env.CLERK_SECRET_KEY || process.env.CRON_SECRET || 'gearvo-dev-bridge';
-}
-
-function sign(payload: string) {
-  return createHmac('sha256', signingKey()).update(payload).digest('base64url');
-}
-
-export function createAuthBridgeValue(clerkUserId: string) {
-  const exp = Math.floor(Date.now() / 1000) + BRIDGE_MAX_AGE_SEC;
-  const body = `${clerkUserId}.${exp}`;
-  return `${body}.${sign(body)}`;
-}
-
-export function readAuthBridgeClerkId(raw: string | undefined | null): string | null {
-  if (!raw) return null;
-  const parts = raw.split('.');
-  if (parts.length !== 3) return null;
-  const [clerkUserId, expStr, sig] = parts;
-  const exp = Number(expStr);
-  if (!clerkUserId || !Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) {
-    return null;
-  }
-  const expected = sign(`${clerkUserId}.${expStr}`);
-  try {
-    const a = Buffer.from(sig);
-    const b = Buffer.from(expected);
-    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  } catch {
-    return null;
-  }
-  return clerkUserId;
-}
+/**
+ * Public JWT verification key for Clerk development instance
+ * `maximum-squid-62` (from /.well-known/jwks.json). Safe to ship — it is public.
+ */
+const CLERK_DEV_INSTANCE_JWT_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvklA4GlE0+iWFLxyq0hg
+zU54pvfm6aTK/gHCFy+vKX6QTMjgHB5a2JxBGxq7Wib1fjKQxC9fMzcMtcU2dq6I
+IHao3GtiQ2ANGU4yrjLN5xiViJzxz3H6i54j9K3RX6PIt/ROw95xyFKuj7wnH8OX
+Cd02VJhT1l+oGON8XnoEjmhpu79f2aCKNmZSEgoyLIvuk/Fqt+rbhEkgCU7e83ww
+BUeXt8SsSIR3lQbibboZoGylhs8MPbOf5P8NSYLAqeblh9Hm4o3OzM/WKz5VHo/e
+ffPcywjG99hB0VEEA1bZpkOZAmcJErWLjvVa6hVkZFC/whDmNt6x4yYgSH/jIx4U
+wQIDAQAB
+-----END PUBLIC KEY-----
+`;
 
 export async function setAuthBridgeCookie(clerkUserId: string) {
   const jar = await cookies();
@@ -56,32 +40,13 @@ export async function clearAuthBridgeCookie() {
   jar.delete(AUTH_BRIDGE_COOKIE);
 }
 
-/**
- * Public JWT verification key for Clerk development instance
- * `maximum-squid-62` (from /.well-known/jwks.json). Safe to ship — it is public.
- * Override with CLERK_JWT_KEY on Netlify if you rotate instances.
- */
-const CLERK_DEV_INSTANCE_JWT_KEY = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvklA4GlE0+iWFLxyq0hg
-zU54pvfm6aTK/gHCFy+vKX6QTMjgHB5a2JxBGxq7Wib1fjKQxC9fMzcMtcU2dq6I
-IHao3GtiQ2ANGU4yrjLN5xiViJzxz3H6i54j9K3RX6PIt/ROw95xyFKuj7wnH8OX
-Cd02VJhT1l+oGON8XnoEjmhpu79f2aCKNmZSEgoyLIvuk/Fqt+rbhEkgCU7e83ww
-BUeXt8SsSIR3lQbibboZoGylhs8MPbOf5P8NSYLAqeblh9Hm4o3OzM/WKz5VHo/e
-ffPcywjG99hB0VEEA1bZpkOZAmcJErWLjvVa6hVkZFC/whDmNt6x4yYgSH/jIx4U
-wQIDAQAB
------END PUBLIC KEY-----
-`;
-
 function jwtVerifyOptions() {
   const secretKey = process.env.CLERK_SECRET_KEY;
   let jwtKey = process.env.CLERK_JWT_KEY || CLERK_DEV_INSTANCE_JWT_KEY;
   if (jwtKey.includes('\\n')) {
     jwtKey = jwtKey.replace(/\\n/g, '\n');
   }
-  return {
-    secretKey,
-    jwtKey,
-  };
+  return { secretKey, jwtKey };
 }
 
 /** Verify a Clerk session JWT from the browser (works with pk_test on Netlify). */
