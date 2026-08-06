@@ -21,6 +21,17 @@ const appearance = {
 };
 
 /**
+ * Hard navigations avoid Next.js Server Action / RSC skew on Netlify after Clerk auth changes.
+ */
+function hardPush(to: string) {
+  window.location.assign(to);
+}
+
+function hardReplace(to: string) {
+  window.location.replace(to);
+}
+
+/**
  * Wraps children in ClerkProvider when Clerk is configured.
  */
 export function ClerkWrapper({
@@ -33,5 +44,13 @@ export function ClerkWrapper({
   if (!useClerk) {
     return <>{children}</>;
   }
-  return <ClerkProvider appearance={appearance}>{children}</ClerkProvider>;
+  return (
+    <ClerkProvider
+      appearance={appearance}
+      routerPush={hardPush}
+      routerReplace={hardReplace}
+    >
+      {children}
+    </ClerkProvider>
+  );
 }
