@@ -56,15 +56,31 @@ export async function clearAuthBridgeCookie() {
   jar.delete(AUTH_BRIDGE_COOKIE);
 }
 
+/**
+ * Public JWT verification key for Clerk development instance
+ * `maximum-squid-62` (from /.well-known/jwks.json). Safe to ship — it is public.
+ * Override with CLERK_JWT_KEY on Netlify if you rotate instances.
+ */
+const CLERK_DEV_INSTANCE_JWT_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvklA4GlE0+iWFLxyq0hg
+zU54pvfm6aTK/gHCFy+vKX6QTMjgHB5a2JxBGxq7Wib1fjKQxC9fMzcMtcU2dq6I
+IHao3GtiQ2ANGU4yrjLN5xiViJzxz3H6i54j9K3RX6PIt/ROw95xyFKuj7wnH8OX
+Cd02VJhT1l+oGON8XnoEjmhpu79f2aCKNmZSEgoyLIvuk/Fqt+rbhEkgCU7e83ww
+BUeXt8SsSIR3lQbibboZoGylhs8MPbOf5P8NSYLAqeblh9Hm4o3OzM/WKz5VHo/e
+ffPcywjG99hB0VEEA1bZpkOZAmcJErWLjvVa6hVkZFC/whDmNt6x4yYgSH/jIx4U
+wQIDAQAB
+-----END PUBLIC KEY-----
+`;
+
 function jwtVerifyOptions() {
   const secretKey = process.env.CLERK_SECRET_KEY;
-  let jwtKey = process.env.CLERK_JWT_KEY;
-  if (jwtKey?.includes('\\n')) {
+  let jwtKey = process.env.CLERK_JWT_KEY || CLERK_DEV_INSTANCE_JWT_KEY;
+  if (jwtKey.includes('\\n')) {
     jwtKey = jwtKey.replace(/\\n/g, '\n');
   }
   return {
     secretKey,
-    ...(jwtKey ? { jwtKey } : {}),
+    jwtKey,
   };
 }
 
@@ -78,7 +94,15 @@ export async function clerkUserIdFromSessionToken(
     return typeof payload.sub === 'string' ? payload.sub : null;
   } catch (err) {
     console.error('[clerk-bridge] verifyToken failed:', err);
-    return null;
+    try {
+      const payload = await verifyToken(sessionToken, {
+        secretKey: process.env.CLERK_SECRET_KEY,
+      });
+      return typeof payload.sub === 'string' ? payload.sub : null;
+    } catch (err2) {
+      console.error('[clerk-bridge] verifyToken secretKey-only failed:', err2);
+      return null;
+    }
   }
 }
 
