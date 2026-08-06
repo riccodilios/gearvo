@@ -1,10 +1,13 @@
 'use client';
 
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { SignIn, SignedIn, SignedOut, SignOutButton, useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { SignIn, SignedIn, SignedOut, useClerk, useUser } from '@clerk/nextjs';
 import { AuthChrome } from '@/components/i18n/AuthChrome';
 import { useI18n } from '@/i18n/provider';
 import { Button } from '@/components/ui/button';
+import { resolvePostAuthDestination } from '@/app/actions/post-auth';
 
 const appearance = {
   variables: {
@@ -26,9 +29,25 @@ const DEMO_EMAILS = new Set(['demo.owner@gearvo.app', 'demo.manager@gearvo.app']
 
 function AlreadySignedIn() {
   const { user } = useUser();
+  const { signOut } = useClerk();
   const { t, locale } = useI18n();
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? '';
   const isDemo = DEMO_EMAILS.has(email);
+
+  const continueToApp = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await resolvePostAuthDestination();
+      if (result.error && result.destination === '/sign-in') {
+        setError(result.error);
+        return;
+      }
+      router.push(result.destination);
+    });
+  };
 
   return (
     <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6 text-center">
@@ -43,15 +62,25 @@ function AlreadySignedIn() {
             : 'This is the Al-Noor demo session. Sign out before using your real account.'}
         </p>
       )}
+      {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
       <div className="mt-6 flex flex-col gap-2">
-        <SignOutButton redirectUrl="/sign-in">
-          <Button type="button" className="w-full">
-            {locale === 'ar' ? 'تسجيل الخروج ثم تسجيل الدخول' : 'Sign out, then sign in'}
-          </Button>
-        </SignOutButton>
+        <Button
+          type="button"
+          className="w-full"
+          disabled={pending}
+          onClick={() => void signOut({ redirectUrl: '/sign-in' })}
+        >
+          {locale === 'ar' ? 'تسجيل الخروج ثم تسجيل الدخول' : 'Sign out, then sign in'}
+        </Button>
         {!isDemo && (
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/welcome">{t.onboarding.goDashboard}</Link>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={pending}
+            onClick={continueToApp}
+          >
+            {pending ? '…' : t.onboarding.goDashboard}
           </Button>
         )}
         {isDemo && (
