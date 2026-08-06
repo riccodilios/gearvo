@@ -4,22 +4,22 @@ import { EmptyState } from '@/components/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDateTime } from '@/lib/utils';
 import { Activity } from 'lucide-react';
-import { getT } from '@/i18n/server';
+import { Ui } from '@/i18n/T';
 
 export default async function ActivityPage() {
-  const [t, activity] = await Promise.all([getT(), getActivity({ take: 100 })]);
+  const activity = await getActivity({ take: 100 });
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <PageHeader
-        title={t.ui.activityTitle}
-        description={t.ui.activityDesc}
+        title={<Ui k="activityTitle" />}
+        description={<Ui k="activityDesc" />}
       />
       {activity.length === 0 ? (
         <EmptyState
           icon={<Activity className="h-6 w-6" />}
-          title={t.ui.noActivityYet}
-          description={t.ui.activityEmptyHint}
+          title={<Ui k="noActivityYet" />}
+          description={<Ui k="activityEmptyHint" />}
         />
       ) : (
         <Card>
@@ -32,7 +32,7 @@ export default async function ActivityPage() {
                 <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                   {a.action} · {a.entityType}
                   {a.entityId ? ` #${a.entityId.slice(0, 8)}` : ''} ·{' '}
-                  {a.user?.fullName ?? t.ui.systemUser} · {formatDateTime(a.createdAt)}
+                  {a.user?.fullName ?? <Ui k="systemUser" />} · {formatDateTime(a.createdAt)}
                 </p>
               </div>
             ))}

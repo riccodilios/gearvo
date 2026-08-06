@@ -20,24 +20,10 @@ import {
 } from 'lucide-react';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { LowStockAlerts } from '@/components/dashboard/LowStockAlerts';
-import { getT } from '@/i18n/server';
-import type { Dictionary } from '@/i18n/dictionaries';
-
-function statusLabel(t: Dictionary, status: string) {
-  const map: Record<string, string> = {
-    PENDING: t.ui.statusPending,
-    IN_PROGRESS: t.ui.statusInProgress,
-    WAITING_PARTS: t.ui.statusWaitingParts,
-    COMPLETED: t.ui.statusCompleted,
-    DELIVERED: t.ui.statusDelivered,
-    CANCELLED: t.ui.statusCancelled,
-  };
-  return map[status] ?? status.replace(/_/g, ' ');
-}
+import { AppLabel, CommonLabel, Ui } from '@/i18n/T';
 
 export default async function DashboardPage() {
-  const [t, stats, revenueTrend, recentOrders] = await Promise.all([
-    getT(),
+  const [stats, revenueTrend, recentOrders] = await Promise.all([
     getDashboardStats(),
     getRevenueTrend(6),
     getRecentRepairOrders(5),
@@ -45,27 +31,27 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <PageHeader title={t.app.dashboard} description={t.ui.dashboardOverview} />
+      <PageHeader title={<AppLabel k="dashboard" />} description={<Ui k="dashboardOverview" />} />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
-          title={t.ui.revenueToday}
+          title={<Ui k="revenueToday" />}
           value={formatCurrency(stats.revenueToday)}
           icon={DollarSign}
         />
         <StatCard
-          title={t.ui.revenueMonth}
+          title={<Ui k="revenueMonth" />}
           value={formatCurrency(stats.revenueMonth)}
           icon={TrendingUp}
         />
         <StatCard
-          title={t.ui.profitMonth}
+          title={<Ui k="profitMonth" />}
           value={formatCurrency(stats.profitMonth)}
-          description={t.ui.fromCompletedRepairs}
+          description={<Ui k="fromCompletedRepairs" />}
           icon={DollarSign}
         />
         <StatCard
-          title={t.ui.outstandingBalance}
+          title={<Ui k="outstandingBalance" />}
           value={formatCurrency(stats.outstanding)}
           icon={AlertTriangle}
         />
@@ -74,7 +60,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t.ui.activeRepairs}</CardTitle>
+            <CardTitle className="text-sm font-medium"><Ui k="activeRepairs" /></CardTitle>
             <Wrench className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
@@ -83,56 +69,56 @@ export default async function DashboardPage() {
               href="/repair-orders"
               className="text-xs text-amber-500 hover:underline"
             >
-              {t.common.viewAll}
+              <CommonLabel k="viewAll" />
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t.ui.totalCustomers}</CardTitle>
+            <CardTitle className="text-sm font-medium"><Ui k="totalCustomers" /></CardTitle>
             <Users className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.customersCount}</div>
             <Link href="/customers" className="text-xs text-amber-500 hover:underline">
-              {t.common.viewAll}
+              <CommonLabel k="viewAll" />
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t.ui.lowStockItems}</CardTitle>
+            <CardTitle className="text-sm font-medium"><Ui k="lowStockItems" /></CardTitle>
             <Package className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.lowStockCount}</div>
             <Link href="/inventory" className="text-xs text-amber-500 hover:underline">
-              {t.ui.manage}
+              <Ui k="manage" />
             </Link>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t.ui.upcomingInstallments}</CardTitle>
+            <CardTitle className="text-sm font-medium"><Ui k="upcomingInstallments" /></CardTitle>
             <Calendar className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {formatCurrency(stats.upcomingInstallments)}
             </div>
-            <p className="text-xs text-zinc-500">{t.ui.next30Days}</p>
+            <p className="text-xs text-zinc-500"><Ui k="next30Days" /></p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t.ui.nextMonthForecast}</CardTitle>
+            <CardTitle className="text-sm font-medium"><Ui k="nextMonthForecast" /></CardTitle>
             <TrendingUp className="h-4 w-4 text-zinc-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {formatCurrency(stats.forecastNextMonth)}
             </div>
-            <p className="text-xs text-zinc-500">{t.ui.basedOnTrend}</p>
+            <p className="text-xs text-zinc-500"><Ui k="basedOnTrend" /></p>
           </CardContent>
         </Card>
       </div>
@@ -140,8 +126,8 @@ export default async function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>{t.ui.revenueTrend}</CardTitle>
-            <p className="text-sm text-zinc-400">{t.ui.last6Months}</p>
+            <CardTitle><Ui k="revenueTrend" /></CardTitle>
+            <p className="text-sm text-zinc-400"><Ui k="last6Months" /></p>
           </CardHeader>
           <CardContent>
             <RevenueChart data={revenueTrend} />
@@ -151,18 +137,18 @@ export default async function DashboardPage() {
           <LowStockAlerts />
           <Card>
             <CardHeader>
-              <CardTitle>{t.ui.recentRepairOrders}</CardTitle>
+              <CardTitle><Ui k="recentRepairOrders" /></CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {recentOrders.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center">
-                    <p className="text-sm text-zinc-500">{t.ui.noRecentRepairOrders}</p>
+                    <p className="text-sm text-zinc-500"><Ui k="noRecentRepairOrders" /></p>
                     <Link
                       href="/repair-orders"
                       className="mt-2 inline-block text-sm font-medium text-amber-500 hover:underline"
                     >
-                      {t.ui.createRepairOrder}
+                      <Ui k="createRepairOrder" />
                     </Link>
                   </div>
                 ) : (
@@ -183,7 +169,7 @@ export default async function DashboardPage() {
                         <p className="font-medium">
                           {formatCurrency(Number(order.totalPrice))}
                         </p>
-                        <StatusBadge label={statusLabel(t, order.status)} status={order.status} />
+                        <StatusBadge status={order.status} />
                       </div>
                     </Link>
                   ))
@@ -197,7 +183,7 @@ export default async function DashboardPage() {
   );
 }
 
-function StatusBadge({ status, label }: { status: string; label: string }) {
+function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, 'default' | 'secondary' | 'success' | 'warning'> = {
     PENDING: 'secondary',
     IN_PROGRESS: 'default',
@@ -206,9 +192,18 @@ function StatusBadge({ status, label }: { status: string; label: string }) {
     DELIVERED: 'success',
     CANCELLED: 'secondary',
   };
+  const keys = {
+    PENDING: 'statusPending',
+    IN_PROGRESS: 'statusInProgress',
+    WAITING_PARTS: 'statusWaitingParts',
+    COMPLETED: 'statusCompleted',
+    DELIVERED: 'statusDelivered',
+    CANCELLED: 'statusCancelled',
+  } as const;
+  const key = keys[status as keyof typeof keys];
   return (
     <Badge variant={variants[status] ?? 'secondary'} className="mt-1">
-      {label}
+      {key ? <Ui k={key} /> : status.replace(/_/g, ' ')}
     </Badge>
   );
 }

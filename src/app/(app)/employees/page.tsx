@@ -8,31 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AddMemberForm } from '@/components/employees/AddMemberForm';
 import { UserCog } from 'lucide-react';
-import { getT } from '@/i18n/server';
+import { AppLabel, Ui } from '@/i18n/T';
 
 export default async function EmployeesPage() {
   await gatePage('members:manage', FeatureModule.EMPLOYEES);
-  const [t, team, branches] = await Promise.all([
-    getT(),
-    getTeamUsers(),
-    listBranches(),
-  ]);
-
-  const ROLE_LABELS: Record<string, string> = {
-    OWNER: t.ui.roleOwner,
-    COMPANY_MANAGER: t.ui.roleCompanyManager,
-    BRANCH_MANAGER: t.ui.roleBranchManager,
-    TECHNICIAN: t.ui.roleTechnician,
-    RECEPTIONIST: t.ui.roleReceptionist,
-    ACCOUNTANT: t.ui.roleAccountant,
-    VIEWER: t.ui.roleViewer,
-  };
+  const [team, branches] = await Promise.all([getTeamUsers(), listBranches()]);
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <PageHeader
-        title={t.app.employees}
-        description={t.ui.employeesDesc}
+        title={<AppLabel k="employees" />}
+        description={<Ui k="employeesDesc" />}
       />
 
       <AddMemberForm
@@ -41,15 +27,15 @@ export default async function EmployeesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t.ui.teamDirectory}</CardTitle>
+          <CardTitle><Ui k="teamDirectory" /></CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {team.length === 0 ? (
             <EmptyState
               compact
               icon={<UserCog className="h-5 w-5" />}
-              title={t.ui.noTeamMembers}
-              description={t.ui.inviteStaffHint}
+              title={<Ui k="noTeamMembers" />}
+              description={<Ui k="inviteStaffHint" />}
             />
           ) : (
             team.map((m) => (
@@ -62,8 +48,8 @@ export default async function EmployeesPage() {
                   <p className="truncate text-zinc-500">{m.user.email}</p>
                 </div>
                 <Badge variant="secondary" className="w-fit max-w-full truncate">
-                  {ROLE_LABELS[m.role] ?? m.role.replace(/_/g, ' ')}
-                  {m.branch ? ` · ${m.branch.name}` : ` · ${t.ui.companyWide}`}
+                  <RoleLabel role={m.role} />
+                  {m.branch ? ` · ${m.branch.name}` : <> · <Ui k="companyWide" /></>}
                 </Badge>
               </div>
             ))
@@ -72,4 +58,18 @@ export default async function EmployeesPage() {
       </Card>
     </div>
   );
+}
+
+function RoleLabel({ role }: { role: string }) {
+  const keys = {
+    OWNER: 'roleOwner',
+    COMPANY_MANAGER: 'roleCompanyManager',
+    BRANCH_MANAGER: 'roleBranchManager',
+    TECHNICIAN: 'roleTechnician',
+    RECEPTIONIST: 'roleReceptionist',
+    ACCOUNTANT: 'roleAccountant',
+    VIEWER: 'roleViewer',
+  } as const;
+  const key = keys[role as keyof typeof keys];
+  return key ? <Ui k={key} /> : role.replace(/_/g, ' ');
 }

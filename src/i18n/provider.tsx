@@ -52,8 +52,18 @@ function applyDocumentLocale(locale: Locale) {
   }
 }
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const locale = useSyncExternalStore(subscribe, getStoredLocale, () => 'en' as Locale);
+export function I18nProvider({
+  children,
+  initialLocale = 'en',
+}: {
+  children: ReactNode;
+  initialLocale?: Locale;
+}) {
+  const locale = useSyncExternalStore(
+    subscribe,
+    getStoredLocale,
+    () => initialLocale
+  );
 
   useEffect(() => {
     applyDocumentLocale(locale);
@@ -88,14 +98,6 @@ export function useI18n() {
 export function LanguageSwitcher({ className }: { className?: string } = {}) {
   const { locale, setLocale, t } = useI18n();
 
-  const switchLocale = (next: Locale) => {
-    if (next === locale) return;
-    // Persist cookie + localStorage, flip dir immediately, then reload so
-    // server-rendered cards/details on this page re-read the locale cookie.
-    setLocale(next);
-    window.location.reload();
-  };
-
   return (
     <div
       className={`flex gap-0.5 rounded-full border border-zinc-800/80 bg-zinc-900/80 p-0.5 text-[10px] backdrop-blur sm:gap-1 sm:rounded-lg sm:p-1 sm:text-xs ${className ?? ''}`}
@@ -105,14 +107,14 @@ export function LanguageSwitcher({ className }: { className?: string } = {}) {
       <button
         type="button"
         className={`rounded-full px-1.5 py-1 font-medium touch-manipulation sm:rounded sm:px-2.5 sm:py-1.5 ${locale === 'en' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
-        onClick={() => switchLocale('en')}
+        onClick={() => setLocale('en')}
       >
         EN
       </button>
       <button
         type="button"
         className={`rounded-full px-1.5 py-1 font-medium touch-manipulation sm:rounded sm:px-2.5 sm:py-1.5 ${locale === 'ar' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
-        onClick={() => switchLocale('ar')}
+        onClick={() => setLocale('ar')}
       >
         ع
       </button>

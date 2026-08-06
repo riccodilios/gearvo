@@ -7,7 +7,7 @@ import { Package, Plus, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CarPartFormDialog } from '@/components/inventory/CarPartFormDialog';
 import { InventorySearchFilter } from '@/components/inventory/InventorySearchFilter';
-import { getT } from '@/i18n/server';
+import { AppLabel, Ui } from '@/i18n/T';
 import {
   Table,
   TableBody,
@@ -25,10 +25,7 @@ export default async function InventoryPage({
   const params = await searchParams;
   const category = params.category ?? 'all';
   const query = params.q ?? '';
-  const [t, { items: parts }] = await Promise.all([
-    getT(),
-    getCarParts({ category, q: query, pageSize: 100 }),
-  ]);
+  const { items: parts } = await getCarParts({ category, q: query, pageSize: 100 });
   const categories = [...new Set(parts.map((p) => p.category).filter(Boolean))] as string[];
   const filtered = parts;
 
@@ -51,14 +48,14 @@ export default async function InventoryPage({
   return (
     <div className="space-y-6 sm:space-y-8">
       <PageHeader
-        title={t.app.inventory}
-        description={t.ui.inventoryDesc}
+        title={<AppLabel k="inventory" />}
+        description={<Ui k="inventoryDesc" />}
         actions={
           <CarPartFormDialog
             trigger={
               <Button className="w-full touch-manipulation sm:w-auto">
                 <Plus className="me-2 h-4 w-4" />
-                {t.ui.addPart}
+                <Ui k="addPart" />
               </Button>
             }
           />
@@ -70,10 +67,10 @@ export default async function InventoryPage({
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Package className="h-6 w-6" />}
-          title={t.ui.noPartsInInventory}
-          description={t.ui.addPartsToStart}
+          title={<Ui k="noPartsInInventory" />}
+          description={<Ui k="addPartsToStart" />}
           action={
-            <CarPartFormDialog trigger={<Button>{t.ui.addPart}</Button>} />
+            <CarPartFormDialog trigger={<Button><Ui k="addPart" /></Button>} />
           }
         />
       ) : (
@@ -104,14 +101,14 @@ export default async function InventoryPage({
                       part={partEditPayload(part)}
                       trigger={
                         <Button variant="ghost" size="sm" className="min-h-10 shrink-0 touch-manipulation">
-                          {t.app.edit}
+                          <AppLabel k="edit" />
                         </Button>
                       }
                     />
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
                     <div>
-                      <p className="text-[11px] text-zinc-500">{t.ui.colStock}</p>
+                      <p className="text-[11px] text-zinc-500"><Ui k="colStock" /></p>
                       <p
                         className={`mt-0.5 flex items-center gap-1 font-medium tabular-nums ${
                           low ? 'text-amber-500' : 'text-zinc-200'
@@ -122,13 +119,13 @@ export default async function InventoryPage({
                       </p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-zinc-500">{t.ui.colRetail}</p>
+                      <p className="text-[11px] text-zinc-500"><Ui k="colRetail" /></p>
                       <p className="mt-0.5 font-medium tabular-nums text-zinc-200">
                         {formatCurrency(Number(part.retailPrice))}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-zinc-500">{t.ui.colMargin}</p>
+                      <p className="text-[11px] text-zinc-500"><Ui k="colMargin" /></p>
                       <p className="mt-0.5 font-medium tabular-nums text-emerald-500">
                         {margin(Number(part.retailPrice), Number(part.costPrice))}%
                       </p>
@@ -145,14 +142,14 @@ export default async function InventoryPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t.ui.colName}</TableHead>
-                    <TableHead>{t.ui.colPartNumber}</TableHead>
-                    <TableHead>{t.ui.colCategory}</TableHead>
-                    <TableHead>{t.ui.colSupplier}</TableHead>
-                    <TableHead className="text-right">{t.ui.colStock}</TableHead>
-                    <TableHead className="text-right">{t.ui.colCost}</TableHead>
-                    <TableHead className="text-right">{t.ui.colRetail}</TableHead>
-                    <TableHead className="text-right">{t.ui.colMargin}</TableHead>
+                    <TableHead><Ui k="colName" /></TableHead>
+                    <TableHead><Ui k="colPartNumber" /></TableHead>
+                    <TableHead><Ui k="colCategory" /></TableHead>
+                    <TableHead><Ui k="colSupplier" /></TableHead>
+                    <TableHead className="text-right"><Ui k="colStock" /></TableHead>
+                    <TableHead className="text-right"><Ui k="colCost" /></TableHead>
+                    <TableHead className="text-right"><Ui k="colRetail" /></TableHead>
+                    <TableHead className="text-right"><Ui k="colMargin" /></TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -200,7 +197,7 @@ export default async function InventoryPage({
                           part={partEditPayload(part)}
                           trigger={
                             <Button variant="ghost" size="sm">
-                              {t.app.edit}
+                              <AppLabel k="edit" />
                             </Button>
                           }
                         />

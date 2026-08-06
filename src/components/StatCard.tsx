@@ -2,10 +2,10 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
 
-interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  title: string;
+interface StatCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
+  title: React.ReactNode;
   value: string | number;
-  description?: string;
+  description?: React.ReactNode;
   icon?: LucideIcon;
   trend?: {
     value: number;

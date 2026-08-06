@@ -2,20 +2,20 @@ import { getLowStockParts } from '@/app/actions/inventory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
-import { getT } from '@/i18n/server';
+import { Ui } from '@/i18n/T';
 
 export async function LowStockAlerts() {
-  const [t, parts] = await Promise.all([getT(), getLowStockParts()]);
+  const parts = await getLowStockParts();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t.ui.lowStockAlerts}</CardTitle>
-        <p className="text-sm text-zinc-400">{t.ui.partsBelowMin}</p>
+        <CardTitle><Ui k="lowStockAlerts" /></CardTitle>
+        <p className="text-sm text-zinc-400"><Ui k="partsBelowMin" /></p>
       </CardHeader>
       <CardContent>
         {parts.length === 0 ? (
-          <p className="text-sm text-zinc-500">{t.ui.allPartsStocked}</p>
+          <p className="text-sm text-zinc-500"><Ui k="allPartsStocked" /></p>
         ) : (
           <div className="space-y-3">
             {parts.slice(0, 5).map((part) => (
@@ -28,7 +28,7 @@ export async function LowStockAlerts() {
                   <div>
                     <p className="font-medium">{part.name}</p>
                     <p className="text-sm text-zinc-500">
-                      {part.stockQuantity} / {part.minStockLevel} {t.ui.minAbbrev}
+                      {part.stockQuantity} / {part.minStockLevel} <Ui k="minAbbrev" />
                     </p>
                   </div>
                   <p className="text-sm font-medium text-amber-500">
@@ -42,7 +42,7 @@ export async function LowStockAlerts() {
                 href="/inventory"
                 className="block text-center text-sm text-amber-500 hover:underline"
               >
-                +{parts.length - 5} {t.ui.more}
+                +{parts.length - 5} <Ui k="more" />
               </Link>
             )}
           </div>

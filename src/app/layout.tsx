@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, IBM_Plex_Sans_Arabic } from 'next/font/google';
 import { ClerkWrapper } from '@/components/ClerkWrapper';
 import { Providers } from './providers';
 import { PwaRegister } from '@/components/PwaRegister';
+import { getLocale } from '@/i18n/server';
 import './globals.css';
 
 const geistSans = Geist({
@@ -86,16 +87,18 @@ const localeBootScript = `
 })();
 `;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialLocale = await getLocale();
+
   const body = (
     <body
       className={`${geistSans.variable} ${geistMono.variable} ${arabic.variable} min-h-screen bg-zinc-950 text-zinc-50 antialiased`}
     >
-      <Providers>
+      <Providers initialLocale={initialLocale}>
         {children}
         <PwaRegister />
       </Providers>
@@ -106,7 +109,12 @@ export default function RootLayout({
     !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
     !!process.env.CLERK_SECRET_KEY;
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html
+      lang={initialLocale}
+      dir={initialLocale === 'ar' ? 'rtl' : 'ltr'}
+      className={`dark${initialLocale === 'ar' ? ' locale-ar' : ''}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: localeBootScript }} />
       </head>

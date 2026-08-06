@@ -10,7 +10,7 @@ import { RepairOrderStatusSelect } from '@/components/repair-orders/RepairOrderS
 import { GenerateInvoiceButton } from '@/components/repair-orders/GenerateInvoiceButton';
 import { PendingLink } from '@/components/ui/pending-link';
 import { ArrowLeft } from 'lucide-react';
-import { getT } from '@/i18n/server';
+import { Ui } from '@/i18n/T';
 import {
   Table,
   TableBody,
@@ -26,7 +26,7 @@ export default async function RepairOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [t, order] = await Promise.all([getT(), getRepairOrder(id)]);
+  const order = await getRepairOrder(id);
   if (!order) notFound();
 
   return (
@@ -36,11 +36,11 @@ export default async function RepairOrderDetailPage({
         className="inline-flex min-h-10 items-center gap-2 text-sm text-zinc-400 hover:text-amber-500"
       >
         <ArrowLeft className="h-4 w-4" />
-        {t.ui.backToRepairOrders}
+        <Ui k="backToRepairOrders" />
       </PendingLink>
       <PageHeader
         title={order.orderNumber}
-        description={order.description ?? t.ui.repairOrderDetails}
+        description={order.description ?? <Ui k="repairOrderDetails" />}
         actions={
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <RepairOrderStatusSelect orderId={order.id} currentStatus={order.status} />
@@ -49,7 +49,7 @@ export default async function RepairOrderDetailPage({
             )}
             {order.invoice && (
               <Button asChild variant="outline">
-                <Link href={`/invoices/${order.invoice.id}`}>{t.ui.viewInvoice}</Link>
+                <Link href={`/invoices/${order.invoice.id}`}><Ui k="viewInvoice" /></Link>
               </Button>
             )}
           </div>
@@ -59,7 +59,7 @@ export default async function RepairOrderDetailPage({
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">{t.ui.colCustomer}</CardTitle>
+            <CardTitle className="text-sm"><Ui k="colCustomer" /></CardTitle>
           </CardHeader>
           <CardContent>
             <Link
@@ -80,7 +80,7 @@ export default async function RepairOrderDetailPage({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">{t.ui.colVehicle}</CardTitle>
+            <CardTitle className="text-sm"><Ui k="colVehicle" /></CardTitle>
           </CardHeader>
           <CardContent>
             <p className="font-medium">
@@ -98,33 +98,33 @@ export default async function RepairOrderDetailPage({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">{t.ui.colTotal}</CardTitle>
+            <CardTitle className="text-sm"><Ui k="colTotal" /></CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-zinc-500">{t.ui.labor}</span>
+              <span className="text-zinc-500"><Ui k="labor" /></span>
               <span className="tabular-nums">{formatCurrency(Number(order.laborCost))}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-500">{t.ui.parts}</span>
+              <span className="text-zinc-500"><Ui k="parts" /></span>
               <span className="tabular-nums">
                 {formatCurrency(Number(order.partsRetailTotal))}
               </span>
             </div>
             <div className="flex justify-between font-semibold">
-              <span>{t.ui.colTotal}</span>
+              <span><Ui k="colTotal" /></span>
               <span className="tabular-nums text-amber-500">
                 {formatCurrency(Number(order.totalPrice))}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-500">{t.ui.colProfit}</span>
+              <span className="text-zinc-500"><Ui k="colProfit" /></span>
               <span className="tabular-nums text-emerald-400">
                 {formatCurrency(Number(order.profit))}
               </span>
             </div>
             <p className="pt-2 text-xs text-zinc-500">
-              {t.ui.openedAt.replace('{date}', formatDateTime(order.createdAt))}
+              <Ui k="openedAt" vars={{ date: formatDateTime(order.createdAt) }} />
             </p>
             <Badge className="mt-2">{order.status.replace('_', ' ')}</Badge>
           </CardContent>
@@ -133,22 +133,22 @@ export default async function RepairOrderDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>{t.ui.partsUsed}</CardTitle>
+          <CardTitle><Ui k="partsUsed" /></CardTitle>
         </CardHeader>
         <CardContent>
           {order.parts.length === 0 ? (
             <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
-              {t.ui.laborOnlyJob}
+              <Ui k="laborOnlyJob" />
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t.ui.colPart}</TableHead>
-                  <TableHead>{t.ui.colQty}</TableHead>
-                  <TableHead>{t.ui.colCost}</TableHead>
-                  <TableHead>{t.ui.colRetail}</TableHead>
-                  <TableHead>{t.ui.colLineTotal}</TableHead>
+                  <TableHead><Ui k="colPart" /></TableHead>
+                  <TableHead><Ui k="colQty" /></TableHead>
+                  <TableHead><Ui k="colCost" /></TableHead>
+                  <TableHead><Ui k="colRetail" /></TableHead>
+                  <TableHead><Ui k="colLineTotal" /></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -172,7 +172,7 @@ export default async function RepairOrderDetailPage({
       {order.notes && (
         <Card>
           <CardHeader>
-            <CardTitle>{t.ui.notes}</CardTitle>
+            <CardTitle><Ui k="notes" /></CardTitle>
           </CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap text-sm text-zinc-300">{order.notes}</p>

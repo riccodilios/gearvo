@@ -19,18 +19,7 @@ import { InvoicesFilter } from '@/components/invoices/InvoicesFilter';
 import { InvoicesSearch } from '@/components/invoices/InvoicesSearch';
 import { PendingLink } from '@/components/ui/pending-link';
 import { EntityFilterShell } from '@/components/ui/EntityFilterShell';
-import { getT } from '@/i18n/server';
-
-function invoiceStatusLabel(status: string, t: Awaited<ReturnType<typeof getT>>) {
-  const map: Record<string, string> = {
-    PAID: t.ui.statusPaid,
-    PARTIAL: t.ui.statusPartial,
-    OVERDUE: t.ui.statusOverdue,
-    UNPAID: t.ui.statusUnpaid,
-    DRAFT: t.ui.statusDraft,
-  };
-  return map[status] ?? status;
-}
+import { AppLabel, Ui } from '@/i18n/T';
 
 export default async function InvoicesPage({
   searchParams,
@@ -40,7 +29,7 @@ export default async function InvoicesPage({
   const params = await searchParams;
   const status = params.status ?? 'all';
   const query = params.q?.toLowerCase() ?? '';
-  const [t, { items: invoices }] = await Promise.all([getT(), getInvoices({ status })]);
+  const { items: invoices } = await getInvoices({ status });
   const filtered = query
     ? invoices.filter(
         (inv) =>
@@ -51,7 +40,7 @@ export default async function InvoicesPage({
 
   return (
     <EntityFilterShell>
-      <PageHeader title={t.app.invoices} description={t.ui.invoicesDesc} />
+      <PageHeader title={<AppLabel k="invoices" />} description={<Ui k="invoicesDesc" />} />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <InvoicesSearch />
@@ -61,13 +50,13 @@ export default async function InvoicesPage({
       {filtered.length === 0 ? (
         <EmptyState
           icon={<FileText className="h-6 w-6" />}
-          title={query || status !== 'all' ? t.ui.noMatchingInvoices : t.ui.noInvoicesYet}
+          title={query || status !== 'all' ? <Ui k="noMatchingInvoices" /> : <Ui k="noInvoicesYet" />}
           description={
-            query || status !== 'all' ? t.ui.tryClearSearchFilters : t.ui.invoicesFromRepairs
+            query || status !== 'all' ? <Ui k="tryClearSearchFilters" /> : <Ui k="invoicesFromRepairs" />
           }
           action={
             <Button asChild>
-              <Link href="/repair-orders">{t.ui.goToRepairOrders}</Link>
+              <Link href="/repair-orders"><Ui k="goToRepairOrders" /></Link>
             </Button>
           }
         />
@@ -87,27 +76,27 @@ export default async function InvoicesPage({
                     </p>
                     <p className="text-xs text-zinc-500">
                       {inv.dueDate
-                        ? t.ui.duePrefix.replace('{date}', formatDate(inv.dueDate))
-                        : t.ui.noDueDate}
+                        ? <Ui k="duePrefix" vars={{ date: formatDate(inv.dueDate) }} />
+                        : <Ui k="noDueDate" />}
                     </p>
                   </div>
-                  <StatusBadge status={inv.status} label={invoiceStatusLabel(inv.status, t)} />
+                  <StatusBadge status={inv.status} />
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
                   <div className="rounded-lg bg-zinc-900/80 px-2 py-2">
-                    <p className="text-zinc-500">{t.ui.colTotal}</p>
+                    <p className="text-zinc-500"><Ui k="colTotal" /></p>
                     <p className="mt-0.5 font-medium tabular-nums">
                       {formatCurrency(Number(inv.totalAmount))}
                     </p>
                   </div>
                   <div className="rounded-lg bg-zinc-900/80 px-2 py-2">
-                    <p className="text-zinc-500">{t.ui.colPaid}</p>
+                    <p className="text-zinc-500"><Ui k="colPaid" /></p>
                     <p className="mt-0.5 font-medium tabular-nums text-emerald-500">
                       {formatCurrency(Number(inv.paidAmount))}
                     </p>
                   </div>
                   <div className="rounded-lg bg-zinc-900/80 px-2 py-2">
-                    <p className="text-zinc-500">{t.ui.due}</p>
+                    <p className="text-zinc-500"><Ui k="due" /></p>
                     <p className="mt-0.5 font-medium tabular-nums text-amber-500">
                       {formatCurrency(Number(inv.remainingBalance))}
                     </p>
@@ -118,14 +107,14 @@ export default async function InvoicesPage({
                     href={`/invoices/${inv.id}`}
                     className="text-sm font-medium text-amber-500"
                   >
-                    {t.ui.view}
+                    <Ui k="view" />
                   </PendingLink>
                   {inv.status !== 'PAID' && (
                     <PendingLink
                       href={`/invoices/${inv.id}?pay=1`}
                       className="text-sm font-medium text-emerald-500"
                     >
-                      {t.ui.pay}
+                      <Ui k="pay" />
                     </PendingLink>
                   )}
                 </div>
@@ -138,13 +127,13 @@ export default async function InvoicesPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t.ui.colInvoice}</TableHead>
-                    <TableHead>{t.ui.colCustomer}</TableHead>
-                    <TableHead>{t.ui.colAmount}</TableHead>
-                    <TableHead>{t.ui.colPaid}</TableHead>
-                    <TableHead>{t.ui.colBalance}</TableHead>
-                    <TableHead>{t.ui.colDueDate}</TableHead>
-                    <TableHead>{t.ui.colStatus}</TableHead>
+                    <TableHead><Ui k="colInvoice" /></TableHead>
+                    <TableHead><Ui k="colCustomer" /></TableHead>
+                    <TableHead><Ui k="colAmount" /></TableHead>
+                    <TableHead><Ui k="colPaid" /></TableHead>
+                    <TableHead><Ui k="colBalance" /></TableHead>
+                    <TableHead><Ui k="colDueDate" /></TableHead>
+                    <TableHead><Ui k="colStatus" /></TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -164,7 +153,6 @@ export default async function InvoicesPage({
                       <TableCell>
                         <StatusBadge
                           status={inv.status}
-                          label={invoiceStatusLabel(inv.status, t)}
                         />
                       </TableCell>
                       <TableCell className="space-x-2">
@@ -172,14 +160,14 @@ export default async function InvoicesPage({
                           href={`/invoices/${inv.id}`}
                           className="text-amber-500 hover:underline"
                         >
-                          {t.ui.view}
+                          <Ui k="view" />
                         </PendingLink>
                         {inv.status !== 'PAID' && (
                           <PendingLink
                             href={`/invoices/${inv.id}?pay=1`}
                             className="text-emerald-500 hover:underline"
                           >
-                            {t.ui.pay}
+                            <Ui k="pay" />
                           </PendingLink>
                         )}
                       </TableCell>
@@ -195,8 +183,16 @@ export default async function InvoicesPage({
   );
 }
 
-function StatusBadge({ status, label }: { status: string; label: string }) {
+function StatusBadge({ status }: { status: string }) {
   const variant =
     status === 'PAID' ? 'success' : status === 'OVERDUE' ? 'destructive' : 'warning';
-  return <Badge variant={variant}>{label}</Badge>;
+  const keys = {
+    PAID: 'statusPaid',
+    PARTIAL: 'statusPartial',
+    OVERDUE: 'statusOverdue',
+    UNPAID: 'statusUnpaid',
+    DRAFT: 'statusDraft',
+  } as const;
+  const key = keys[status as keyof typeof keys];
+  return <Badge variant={variant}>{key ? <Ui k={key} /> : status}</Badge>;
 }

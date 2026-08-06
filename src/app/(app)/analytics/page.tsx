@@ -19,7 +19,7 @@ import { DailyRevenueChart } from '@/components/analytics/DailyRevenueChart';
 import { PaymentMethodsChart } from '@/components/analytics/PaymentMethodsChart';
 import { RevenueByCategoryChart } from '@/components/analytics/RevenueByCategoryChart';
 import { Skeleton } from '@/components/skeletons/PageSkeletons';
-import { getT } from '@/i18n/server';
+import { AppLabel, Ui } from '@/i18n/T';
 
 function StatsSkeleton() {
   return (
@@ -36,26 +36,26 @@ function ChartCardSkeleton({ className }: { className?: string }) {
 }
 
 async function AnalyticsStats() {
-  const [t, stats] = await Promise.all([getT(), getAnalyticsSummary()]);
+  const stats = await getAnalyticsSummary();
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       <StatCard
-        title={t.ui.analyticsRevenueMonth}
+        title={<Ui k="analyticsRevenueMonth" />}
         value={formatCurrency(stats.revenueMonth)}
         icon={DollarSign}
       />
       <StatCard
-        title={t.ui.analyticsProfitMonth}
+        title={<Ui k="analyticsProfitMonth" />}
         value={formatCurrency(stats.profitMonth)}
         icon={TrendingUp}
       />
       <StatCard
-        title={t.ui.analyticsOutstanding}
+        title={<Ui k="analyticsOutstanding" />}
         value={formatCurrency(stats.outstanding)}
         icon={BarChart3}
       />
       <StatCard
-        title={t.ui.analyticsForecast}
+        title={<Ui k="analyticsForecast" />}
         value={formatCurrency(stats.forecastNextMonth)}
         icon={TrendingUp}
       />
@@ -64,13 +64,13 @@ async function AnalyticsStats() {
 }
 
 async function RevenueProfitSection() {
-  const [t, revenueTrend] = await Promise.all([getT(), getRevenueTrend(12)]);
+  const revenueTrend = await getRevenueTrend(12);
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle>{t.ui.revenueVsProfit}</CardTitle>
-          <p className="text-sm text-zinc-400">{t.ui.monthlyComparison}</p>
+          <CardTitle><Ui k="revenueVsProfit" /></CardTitle>
+          <p className="text-sm text-zinc-400"><Ui k="monthlyComparison" /></p>
         </CardHeader>
         <CardContent>
           <RevenueVsProfitChart data={revenueTrend} />
@@ -79,16 +79,16 @@ async function RevenueProfitSection() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t.ui.revenueTrendTable}</CardTitle>
-          <p className="text-sm text-zinc-400">{t.ui.monthlyOverTime}</p>
+          <CardTitle><Ui k="revenueTrendTable" /></CardTitle>
+          <p className="text-sm text-zinc-400"><Ui k="monthlyOverTime" /></p>
         </CardHeader>
         <CardContent className="p-0">
           <div className="table-scroll px-4 sm:px-6">
             <table className="w-full min-w-[16rem] text-sm">
               <thead>
                 <tr className="border-b border-zinc-800">
-                  <th className="py-3 text-start font-medium">{t.ui.month}</th>
-                  <th className="py-3 text-end font-medium">{t.ui.revenue}</th>
+                  <th className="py-3 text-start font-medium"><Ui k="month" /></th>
+                  <th className="py-3 text-end font-medium"><Ui k="revenue" /></th>
                 </tr>
               </thead>
               <tbody>
@@ -110,8 +110,7 @@ async function RevenueProfitSection() {
 }
 
 async function DailyAndMethodsSection() {
-  const [t, dailyRevenue, paymentMethods] = await Promise.all([
-    getT(),
+  const [dailyRevenue, paymentMethods] = await Promise.all([
     getDailyRevenue(),
     getPaymentMethodsStats(),
   ]);
@@ -120,8 +119,8 @@ async function DailyAndMethodsSection() {
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>{t.ui.dailyRevenue}</CardTitle>
-          <p className="text-sm text-zinc-400">{t.ui.currentMonth}</p>
+          <CardTitle><Ui k="dailyRevenue" /></CardTitle>
+          <p className="text-sm text-zinc-400"><Ui k="currentMonth" /></p>
         </CardHeader>
         <CardContent>
           <DailyRevenueChart
@@ -131,8 +130,8 @@ async function DailyAndMethodsSection() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>{t.ui.paymentMethods}</CardTitle>
-          <p className="text-sm text-zinc-400">{t.ui.revenueByPaymentType}</p>
+          <CardTitle><Ui k="paymentMethods" /></CardTitle>
+          <p className="text-sm text-zinc-400"><Ui k="revenueByPaymentType" /></p>
         </CardHeader>
         <CardContent>
           <PaymentMethodsChart
@@ -148,12 +147,12 @@ async function DailyAndMethodsSection() {
 }
 
 async function CategorySection() {
-  const [t, revenueByCategory] = await Promise.all([getT(), getRevenueByCategory()]);
+  const revenueByCategory = await getRevenueByCategory();
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t.ui.revenueByCategory}</CardTitle>
-        <p className="text-sm text-zinc-400">{t.ui.retailFromRepairs}</p>
+        <CardTitle><Ui k="revenueByCategory" /></CardTitle>
+        <p className="text-sm text-zinc-400"><Ui k="retailFromRepairs" /></p>
       </CardHeader>
       <CardContent>
         <RevenueByCategoryChart
@@ -168,14 +167,14 @@ async function CategorySection() {
 }
 
 async function BranchSection() {
-  const [t, branchCompare] = await Promise.all([getT(), getBranchComparison()]);
+  const branchCompare = await getBranchComparison();
   if (branchCompare.length === 0) return null;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t.ui.branchComparison}</CardTitle>
-        <p className="text-sm text-zinc-400">{t.ui.companyWideView}</p>
+        <CardTitle><Ui k="branchComparison" /></CardTitle>
+        <p className="text-sm text-zinc-400"><Ui k="companyWideView" /></p>
       </CardHeader>
       <CardContent>
         <div className="space-y-3 md:hidden">
@@ -187,17 +186,17 @@ async function BranchSection() {
               <p className="font-medium text-zinc-50">{b.branchName}</p>
               <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
                 <div>
-                  <p className="text-[11px] text-zinc-500">{t.ui.revenue}</p>
+                  <p className="text-[11px] text-zinc-500"><Ui k="revenue" /></p>
                   <p className="mt-0.5 font-medium tabular-nums text-emerald-500">
                     {formatCurrency(b.revenue)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-zinc-500">{t.ui.repairs}</p>
+                  <p className="text-[11px] text-zinc-500"><Ui k="repairs" /></p>
                   <p className="mt-0.5 tabular-nums text-zinc-200">{b.repairs}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-zinc-500">{t.app.customers}</p>
+                  <p className="text-[11px] text-zinc-500"><AppLabel k="customers" /></p>
                   <p className="mt-0.5 tabular-nums text-zinc-200">{b.customers}</p>
                 </div>
               </div>
@@ -208,10 +207,10 @@ async function BranchSection() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-800">
-                <th className="py-3 text-start">{t.ui.branch}</th>
-                <th className="py-3 text-end">{t.ui.revenue}</th>
-                <th className="py-3 text-end">{t.ui.repairs}</th>
-                <th className="py-3 text-end">{t.app.customers}</th>
+                <th className="py-3 text-start"><Ui k="branch" /></th>
+                <th className="py-3 text-end"><Ui k="revenue" /></th>
+                <th className="py-3 text-end"><Ui k="repairs" /></th>
+                <th className="py-3 text-end"><AppLabel k="customers" /></th>
               </tr>
             </thead>
             <tbody>
@@ -235,11 +234,9 @@ async function BranchSection() {
 
 export default async function AnalyticsPage() {
   await gatePage('analytics:read', FeatureModule.ANALYTICS);
-  const t = await getT();
-
   return (
     <div className="space-y-6 sm:space-y-8">
-      <PageHeader title={t.app.analytics} description={t.ui.analyticsDesc} />
+      <PageHeader title={<AppLabel k="analytics" />} description={<Ui k="analyticsDesc" />} />
 
       <Suspense fallback={<StatsSkeleton />}>
         <AnalyticsStats />

@@ -4,9 +4,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useState } from 'react';
 import { I18nProvider } from '@/i18n/provider';
+import type { Locale } from '@/i18n/dictionaries';
 import { Toaster } from 'sonner';
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialLocale = 'en',
+}: {
+  children: React.ReactNode;
+  initialLocale?: Locale;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -20,7 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <I18nProvider>
+      <I18nProvider initialLocale={initialLocale}>
         <TooltipProvider delayDuration={300}>
           {children}
           <Toaster

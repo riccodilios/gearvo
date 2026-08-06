@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SupplierFormDialog } from '@/components/suppliers/SupplierFormDialog';
 import { SupplierCard } from '@/components/suppliers/SupplierCard';
 import { SuppliersSearch } from '@/components/suppliers/SuppliersSearch';
-import { getT } from '@/i18n/server';
+import { AppLabel, Ui } from '@/i18n/T';
 
 export default async function SuppliersPage({
   searchParams,
@@ -15,23 +15,20 @@ export default async function SuppliersPage({
 }) {
   const params = await searchParams;
   const query = params.q ?? '';
-  const [t, { items: suppliers }] = await Promise.all([
-    getT(),
-    getSuppliers({ q: query }),
-  ]);
+  const { items: suppliers } = await getSuppliers({ q: query });
   const filtered = suppliers;
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title={t.app.suppliers}
-        description={t.ui.suppliersDesc}
+        title={<AppLabel k="suppliers" />}
+        description={<Ui k="suppliersDesc" />}
         actions={
           <SupplierFormDialog
             trigger={
               <Button>
                 <Plus className="me-2 h-4 w-4" />
-                {t.ui.addSupplier}
+                <Ui k="addSupplier" />
               </Button>
             }
           />
@@ -43,13 +40,13 @@ export default async function SuppliersPage({
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Package className="h-6 w-6" />}
-          title={query ? t.ui.noSuppliersFound : t.ui.noSuppliersYet}
+          title={query ? <Ui k="noSuppliersFound" /> : <Ui k="noSuppliersYet" />}
           description={
-            query ? t.ui.tryDifferentSearch : t.ui.addFirstSupplier
+            query ? <Ui k="tryDifferentSearch" /> : <Ui k="addFirstSupplier" />
           }
           action={
             !query && (
-              <SupplierFormDialog trigger={<Button>{t.ui.addSupplier}</Button>} />
+              <SupplierFormDialog trigger={<Button><Ui k="addSupplier" /></Button>} />
             )
           }
         />

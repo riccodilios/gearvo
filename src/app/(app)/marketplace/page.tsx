@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ShoppingCart, Package } from 'lucide-react';
 import { MarketplaceSupplierOrder } from '@/components/marketplace/MarketplaceSupplierOrder';
 import { PurchaseOrdersList } from '@/components/marketplace/PurchaseOrdersList';
-import { getT } from '@/i18n/server';
+import { Ui } from '@/i18n/T';
 
 function toNum(v: unknown): number {
   return typeof v === 'number' ? v : Number(String(v));
@@ -14,8 +14,7 @@ function toNum(v: unknown): number {
 
 export default async function MarketplacePage() {
   await gatePage('marketplace:read', FeatureModule.MARKETPLACE);
-  const [t, suppliersWithParts, ordersResult] = await Promise.all([
-    getT(),
+  const [suppliersWithParts, ordersResult] = await Promise.all([
     getSuppliersWithParts(),
     getPurchaseOrders(),
   ]);
@@ -54,17 +53,17 @@ export default async function MarketplacePage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title={t.ui.marketplaceTitle}
-        description={t.ui.marketplaceDesc}
+        title={<Ui k="marketplaceTitle" />}
+        description={<Ui k="marketplaceDesc" />}
       />
 
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-zinc-100">{t.ui.orderFromSuppliers}</h2>
+        <h2 className="mb-4 text-lg font-semibold text-zinc-100"><Ui k="orderFromSuppliers" /></h2>
         {serializedSuppliers.length === 0 ? (
           <EmptyState
             icon={<Package className="h-6 w-6" />}
-            title={t.ui.noPartsLinked}
-            description={t.ui.noPartsLinkedHint}
+            title={<Ui k="noPartsLinked" />}
+            description={<Ui k="noPartsLinkedHint" />}
           />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
@@ -76,13 +75,13 @@ export default async function MarketplacePage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-zinc-100">{t.ui.yourPurchaseOrders}</h2>
+        <h2 className="mb-4 text-lg font-semibold text-zinc-100"><Ui k="yourPurchaseOrders" /></h2>
         {serializedOrders.length === 0 ? (
           <EmptyState
             compact
             icon={<ShoppingCart className="h-5 w-5" />}
-            title={t.ui.noPurchaseOrders}
-            description={t.ui.noPurchaseOrdersHint}
+            title={<Ui k="noPurchaseOrders" />}
+            description={<Ui k="noPurchaseOrdersHint" />}
           />
         ) : (
           <PurchaseOrdersList orders={serializedOrders} />

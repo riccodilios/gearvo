@@ -10,7 +10,7 @@ import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog';
 import { CustomersSearch } from '@/components/customers/CustomersSearch';
 import { PendingLink } from '@/components/ui/pending-link';
 import { CustomersFilterShell } from '@/components/customers/CustomersFilterShell';
-import { getT } from '@/i18n/server';
+import { AppLabel, Ui } from '@/i18n/T';
 
 export default async function CustomersPage({
   searchParams,
@@ -19,27 +19,24 @@ export default async function CustomersPage({
 }) {
   const params = await searchParams;
   const page = Number(params.page ?? 1) || 1;
-  const [t, result] = await Promise.all([
-    getT(),
-    getCustomers({
-      q: params.q,
-      page,
-      pageSize: 50,
-    }),
-  ]);
+  const result = await getCustomers({
+    q: params.q,
+    page,
+    pageSize: 50,
+  });
   const { items: customers, total } = result;
 
   return (
     <CustomersFilterShell>
       <PageHeader
-        title={t.app.customers}
-        description={t.ui.customersInBranch.replace('{count}', String(total))}
+        title={<AppLabel k="customers" />}
+        description={<Ui k="customersInBranch" vars={{ count: total }} />}
         actions={
           <CustomerFormDialog
             trigger={
               <Button>
                 <Plus className="me-2 h-4 w-4" />
-                {t.ui.addCustomer}
+                <Ui k="addCustomer" />
               </Button>
             }
           />
@@ -51,11 +48,11 @@ export default async function CustomersPage({
       {customers.length === 0 ? (
         <EmptyState
           icon={<Users className="h-6 w-6" />}
-          title={params.q ? t.ui.noCustomersFound : t.ui.noCustomersYet}
-          description={params.q ? t.ui.tryDifferentSearch : t.ui.addFirstCustomer}
+          title={params.q ? <Ui k="noCustomersFound" /> : <Ui k="noCustomersYet" />}
+          description={params.q ? <Ui k="tryDifferentSearch" /> : <Ui k="addFirstCustomer" />}
           action={
             !params.q && (
-              <CustomerFormDialog trigger={<Button>{t.ui.addCustomer}</Button>} />
+              <CustomerFormDialog trigger={<Button><Ui k="addCustomer" /></Button>} />
             )
           }
         />
@@ -80,14 +77,14 @@ export default async function CustomersPage({
                     )}
                   </div>
                   <div className="mt-4 flex justify-between text-sm">
-                    <span className="text-zinc-500">{t.ui.spent}</span>
+                    <span className="text-zinc-500"><Ui k="spent" /></span>
                     <span className="font-medium text-amber-500">
                       {formatCurrency(Number(customer.totalSpent))}
                     </span>
                   </div>
                   {Number(customer.outstandingBalance) > 0 && (
                     <div className="mt-1 flex justify-between text-sm">
-                      <span className="text-zinc-500">{t.ui.outstanding}</span>
+                      <span className="text-zinc-500"><Ui k="outstanding" /></span>
                       <span className="text-red-400">
                         {formatCurrency(Number(customer.outstandingBalance))}
                       </span>

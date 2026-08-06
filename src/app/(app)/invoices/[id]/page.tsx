@@ -11,7 +11,7 @@ import {
   InstallmentPlanDialog,
   MarkInstallmentPaidButton,
 } from '@/components/invoices/InstallmentPlanDialog';
-import { getT } from '@/i18n/server';
+import { Ui } from '@/i18n/T';
 
 const INVOICE_STATUS_KEYS = {
   PAID: 'statusPaid',
@@ -30,20 +30,20 @@ export default async function InvoiceDetailPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const [t, invoice] = await Promise.all([getT(), getInvoice(id)]);
+  const invoice = await getInvoice(id);
   if (!invoice) notFound();
   const openPay = sp.pay === '1' && invoice.status !== 'PAID';
 
   const statusLabel = (status: string) => {
     const key = INVOICE_STATUS_KEYS[status as keyof typeof INVOICE_STATUS_KEYS];
-    return key ? t.ui[key] : status;
+    return key ? <Ui k={key} /> : status;
   };
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title={t.ui.invoiceTitle.replace('{number}', invoice.invoiceNumber)}
-        description={t.ui.customerPrefix.replace('{name}', invoice.customer.fullName)}
+        title={<Ui k="invoiceTitle" vars={{ number: invoice.invoiceNumber }} />}
+        description={<Ui k="customerPrefix" vars={{ name: invoice.customer.fullName }} />}
         actions={
           <div className="flex flex-wrap gap-2">
             {invoice.status !== 'PAID' && (
@@ -51,14 +51,14 @@ export default async function InvoiceDetailPage({
                 invoiceId={invoice.id}
                 remainingBalance={Number(invoice.remainingBalance)}
                 defaultOpen={openPay}
-                trigger={<Button>{t.ui.recordPayment}</Button>}
+                trigger={<Button><Ui k="recordPayment" /></Button>}
               />
             )}
             {invoice.status !== 'PAID' && Number(invoice.remainingBalance) > 0 && (
               <InstallmentPlanDialog
                 invoiceId={invoice.id}
                 remainingBalance={Number(invoice.remainingBalance)}
-                trigger={<Button variant="outline">{t.ui.installmentPlan}</Button>}
+                trigger={<Button variant="outline"><Ui k="installmentPlan" /></Button>}
               />
             )}
           </div>
@@ -69,7 +69,7 @@ export default async function InvoiceDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
-              {t.ui.totalAmount}
+              <Ui k="totalAmount" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -81,7 +81,7 @@ export default async function InvoiceDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
-              {t.ui.colPaid}
+              <Ui k="colPaid" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -93,7 +93,7 @@ export default async function InvoiceDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
-              {t.ui.colBalance}
+              <Ui k="colBalance" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -105,7 +105,7 @@ export default async function InvoiceDetailPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400">
-              {t.ui.colStatus}
+              <Ui k="colStatus" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -122,10 +122,10 @@ export default async function InvoiceDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>{t.ui.invoiceItems}</CardTitle>
+          <CardTitle><Ui k="invoiceItems" /></CardTitle>
           {invoice.dueDate && (
             <p className="text-sm text-zinc-400">
-              {t.ui.dueColon.replace('{date}', formatDate(invoice.dueDate))}
+              <Ui k="dueColon" vars={{ date: formatDate(invoice.dueDate) }} />
             </p>
           )}
         </CardHeader>
@@ -153,11 +153,11 @@ export default async function InvoiceDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>{t.ui.paymentHistory}</CardTitle>
+          <CardTitle><Ui k="paymentHistory" /></CardTitle>
         </CardHeader>
         <CardContent>
           {invoice.payments.length === 0 ? (
-            <p className="text-sm text-zinc-500">{t.ui.noPaymentsYet}</p>
+            <p className="text-sm text-zinc-500"><Ui k="noPaymentsYet" /></p>
           ) : (
             <div className="space-y-2">
               {invoice.payments.map((payment) => (
@@ -187,7 +187,7 @@ export default async function InvoiceDetailPage({
       {invoice.installments.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>{t.ui.installmentPlan}</CardTitle>
+            <CardTitle><Ui k="installmentPlan" /></CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -201,7 +201,7 @@ export default async function InvoiceDetailPage({
                       {formatCurrency(Number(inst.amount))}
                     </p>
                     <p className="text-sm text-zinc-500">
-                      {t.ui.dueColon.replace('{date}', formatDate(inst.dueDate))}
+                      <Ui k="dueColon" vars={{ date: formatDate(inst.dueDate) }} />
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
