@@ -42,6 +42,22 @@ function hasClerkHandshake(req: NextRequest) {
   );
 }
 
+/** Strip Clerk handshake params and land on a clean public URL (fallback if middleware crashes). */
+function cleanWelcomeRedirect(req: NextRequest) {
+  const url = req.nextUrl.clone();
+  url.pathname = '/welcome';
+  for (const key of [
+    '__clerk_handshake',
+    '__clerk_db_jwt',
+    '__clerk_ticket',
+    '__clerk_status',
+    '__clerk_netlify_cache_bust',
+  ]) {
+    url.searchParams.delete(key);
+  }
+  return NextResponse.redirect(url);
+}
+
 const clerkHandler = clerkMiddleware(async (auth, req) => {
   if (isProduction && !clerkConfigured) {
     if (isPublicRoute(req)) return NextResponse.next();
@@ -79,21 +95,22 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
 });
 
 /**
- * Google OAuth returns to /welcome?__clerk_handshake=…
- * On Netlify + Clerk development keys, clerkMiddleware handshake handling 500s.
- * Skip Clerk middleware for those public requests and let ClerkJS + /api/auth/continue finish.
+ * Let clerkMiddleware handle OAuth handshakes (sets session cookies).
+ * @clerk/nextjs 6.38+ / 7.x includes Netlify + pk_test cache-bust for handshake redirects.
+ * If handshake still throws, fall back to clean /welcome so ClerkJS + /api/auth/continue can finish.
  */
 export default async function proxy(req: NextRequest, event: NextFetchEvent) {
-  if (hasClerkHandshake(req) && isPublicRoute(req)) {
-    return NextResponse.next();
-  }
-
   try {
-    return await clerkHandler(req, event);
+    const res = await clerkHandler(req, event);
+    if (res && res.status >= 500 && hasClerkHandshake(req)) {
+      console.error('[proxy] clerkMiddleware returned', res.status, 'on handshake — falling back');
+      return cleanWelcomeRedirect(req);
+    }
+    return res;
   } catch (err) {
     console.error('[proxy] clerkMiddleware threw:', err);
     if (hasClerkHandshake(req)) {
-      return NextResponse.next();
+      return cleanWelcomeRedirect(req);
     }
     if (isPublicRoute(req)) {
       return NextResponse.next();
@@ -106,5 +123,6 @@ export const config = {
   matcher: [
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
+    '/__clerk/(.*)',
   ],
 };
