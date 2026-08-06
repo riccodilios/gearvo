@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
-import { resolvePostAuthDestination } from '@/app/actions/post-auth';
+import { clearAuthBridge, resolvePostAuthDestination } from '@/app/actions/post-auth';
 import { Button } from '@/components/ui/button';
 
 function hasClerkHandshakeParams() {
@@ -18,12 +18,23 @@ function hasClerkHandshakeParams() {
 }
 
 export function WelcomeContinueClient() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const { signOut } = useClerk();
   const router = useRouter();
   const [message, setMessage] = useState('Finishing sign-in…');
   const [error, setError] = useState<string | null>(null);
   const ran = useRef(false);
+
+  const finish = async () => {
+    const sessionToken = await getToken().catch(() => null);
+    const result = await resolvePostAuthDestination(sessionToken);
+    if (result.error && result.destination === '/sign-in') {
+      setError(result.error);
+      setMessage('Sign-in incomplete');
+      return;
+    }
+    router.replace(result.destination);
+  };
 
   useEffect(() => {
     if (!isLoaded || ran.current) return;
@@ -42,21 +53,10 @@ export function WelcomeContinueClient() {
     let cancelled = false;
 
     (async () => {
-      // Drop handshake query params from the URL once Clerk is signed in.
       if (hasClerkHandshakeParams()) {
         window.history.replaceState({}, '', '/welcome');
       }
-
-      const result = await resolvePostAuthDestination();
-      if (cancelled) return;
-
-      if (result.error && result.destination === '/sign-in') {
-        setError(result.error);
-        setMessage('Sign-in incomplete');
-        return;
-      }
-
-      router.replace(result.destination);
+      await finish();
     })().catch((err) => {
       console.error(err);
       if (!cancelled) {
@@ -68,6 +68,7 @@ export function WelcomeContinueClient() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when signed in
   }, [isLoaded, isSignedIn, router]);
 
   return (
@@ -83,13 +84,8 @@ export function WelcomeContinueClient() {
                 ran.current = false;
                 setError(null);
                 setMessage('Retrying…');
-                void resolvePostAuthDestination().then((r) => {
-                  if (r.error && r.destination === '/sign-in') {
-                    setError(r.error);
-                    setMessage('Sign-in incomplete');
-                    return;
-                  }
-                  router.replace(r.destination);
+                void finish().finally(() => {
+                  ran.current = true;
                 });
               }}
             >
@@ -98,7 +94,9 @@ export function WelcomeContinueClient() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => void signOut({ redirectUrl: '/sign-in' })}
+              onClick={() => {
+                void clearAuthBridge().finally(() => signOut({ redirectUrl: '/sign-in' }));
+              }}
             >
               Sign out
             </Button>

@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import { AUTH_BRIDGE_COOKIE, readAuthBridgeClerkId } from '@/server/clerk-bridge';
 
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -30,15 +31,15 @@ const allowDevBypass =
   !isProduction &&
   (process.env.ALLOW_DEV_AUTH_BYPASS === 'true' || process.env.ALLOW_DEV_AUTH_BYPASS === '1');
 
+const jwtKey = process.env.CLERK_JWT_KEY;
+
 export default clerkMiddleware(
   async (auth, req) => {
-    // Production must always have Clerk configured — fail closed
     if (isProduction && !clerkConfigured) {
       if (isPublicRoute(req)) return NextResponse.next();
       return new NextResponse('Authentication is not configured.', { status: 503 });
     }
 
-    // Development without Clerk only when explicitly allowed
     if (!clerkConfigured) {
       if (!allowDevBypass && !isPublicRoute(req)) {
         return NextResponse.redirect(new URL('/sign-in', req.url));
@@ -46,20 +47,32 @@ export default clerkMiddleware(
       return NextResponse.next();
     }
 
+    if (isPublicRoute(req)) {
+      return NextResponse.next();
+    }
+
     try {
-      if (!isPublicRoute(req)) {
-        await auth().protect();
+      const session = await auth();
+      if (session.userId) {
+        return NextResponse.next();
       }
     } catch {
-      if (isPublicRoute(req)) return NextResponse.next();
-      const signIn = new URL('/sign-in', req.url);
-      signIn.searchParams.set('redirect_url', req.url);
-      return NextResponse.redirect(signIn);
+      // pk_test on Netlify often cannot read Clerk cookies — fall through to bridge
     }
+
+    const bridged = readAuthBridgeClerkId(req.cookies.get(AUTH_BRIDGE_COOKIE)?.value);
+    if (bridged) {
+      return NextResponse.next();
+    }
+
+    const signIn = new URL('/sign-in', req.url);
+    signIn.searchParams.set('redirect_url', req.url);
+    return NextResponse.redirect(signIn);
   },
   {
     signInUrl: '/sign-in',
     signUpUrl: '/sign-up',
+    ...(jwtKey ? { jwtKey } : {}),
   }
 );
 

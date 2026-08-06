@@ -3,11 +3,11 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { SignIn, SignedIn, SignedOut, useClerk, useUser } from '@clerk/nextjs';
+import { SignIn, SignedIn, SignedOut, useAuth, useClerk, useUser } from '@clerk/nextjs';
 import { AuthChrome } from '@/components/i18n/AuthChrome';
 import { useI18n } from '@/i18n/provider';
 import { Button } from '@/components/ui/button';
-import { resolvePostAuthDestination } from '@/app/actions/post-auth';
+import { clearAuthBridge, resolvePostAuthDestination } from '@/app/actions/post-auth';
 
 const appearance = {
   variables: {
@@ -30,6 +30,7 @@ const DEMO_EMAILS = new Set(['demo.owner@gearvo.app', 'demo.manager@gearvo.app']
 function AlreadySignedIn() {
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { getToken } = useAuth();
   const { t, locale } = useI18n();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -40,12 +41,20 @@ function AlreadySignedIn() {
   const continueToApp = () => {
     setError(null);
     startTransition(async () => {
-      const result = await resolvePostAuthDestination();
+      const sessionToken = await getToken().catch(() => null);
+      const result = await resolvePostAuthDestination(sessionToken);
       if (result.error && result.destination === '/sign-in') {
         setError(result.error);
         return;
       }
       router.push(result.destination);
+    });
+  };
+
+  const handleSignOut = () => {
+    startTransition(async () => {
+      await clearAuthBridge();
+      await signOut({ redirectUrl: '/sign-in' });
     });
   };
 
@@ -68,7 +77,7 @@ function AlreadySignedIn() {
           type="button"
           className="w-full"
           disabled={pending}
-          onClick={() => void signOut({ redirectUrl: '/sign-in' })}
+          onClick={handleSignOut}
         >
           {locale === 'ar' ? 'تسجيل الخروج ثم تسجيل الدخول' : 'Sign out, then sign in'}
         </Button>

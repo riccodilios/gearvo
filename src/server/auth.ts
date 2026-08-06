@@ -14,6 +14,13 @@ import {
 import { isDemoCompanySlug, isDemoEmail } from '@/server/demo-constants';
 import { ensureCompanyFeatureFlags } from '@/server/workspace-bootstrap';
 import { AppError } from '@/server/errors';
+import {
+  AUTH_BRIDGE_COOKIE,
+  clerkUserIdFromSessionToken,
+  fetchClerkProfile,
+  readAuthBridgeClerkId,
+  setAuthBridgeCookie,
+} from '@/server/clerk-bridge';
 
 export const WORKSPACE_COOKIE = 'gearvo-company-id';
 export const BRANCH_COOKIE = 'gearvo-branch-id';
@@ -29,13 +36,29 @@ export type WorkspaceContext = {
   branchIds: string[];
 };
 
-async function resolveClerkUserId(): Promise<string | null> {
+export type EnsureUserOptions = {
+  /** Clerk session JWT from the browser when Netlify cannot read Clerk cookies. */
+  sessionToken?: string | null;
+};
+
+async function resolveClerkUserId(options?: EnsureUserOptions): Promise<string | null> {
   if (env.clerkConfigured) {
     try {
       const session = await auth();
-      return session.userId ?? null;
+      if (session.userId) return session.userId;
     } catch {
-      return null;
+      // fall through — common with pk_test on Netlify
+    }
+
+    const fromToken = await clerkUserIdFromSessionToken(options?.sessionToken);
+    if (fromToken) return fromToken;
+
+    try {
+      const jar = await cookies();
+      const bridged = readAuthBridgeClerkId(jar.get(AUTH_BRIDGE_COOKIE)?.value);
+      if (bridged) return bridged;
+    } catch {
+      // cookies() unavailable in some contexts
     }
   }
   if (env.allowDevBypass) {
@@ -45,27 +68,45 @@ async function resolveClerkUserId(): Promise<string | null> {
   return null;
 }
 
-export async function ensurePrismaUser(): Promise<User | null> {
-  const clerkId = await resolveClerkUserId();
+export async function ensurePrismaUser(options?: EnsureUserOptions): Promise<User | null> {
+  const clerkId = await resolveClerkUserId(options);
   if (!clerkId) return null;
 
   let user = await prisma.user.findUnique({ where: { clerkId } });
-  if (user) return user;
+  if (user) {
+    if (options?.sessionToken) {
+      await setAuthBridgeCookie(clerkId).catch(() => undefined);
+    }
+    return user;
+  }
 
   if (env.clerkConfigured) {
-    let cu: Awaited<ReturnType<typeof currentUser>> = null;
+    let email: string | null = null;
+    let fullName = 'User';
+    let avatarUrl: string | null = null;
+
     try {
-      cu = await currentUser();
+      const cu = await currentUser();
+      if (cu) {
+        email =
+          cu.emailAddresses.find((e) => e.id === cu.primaryEmailAddressId)?.emailAddress ??
+          cu.emailAddresses[0]?.emailAddress ??
+          null;
+        fullName =
+          [cu.firstName, cu.lastName].filter(Boolean).join(' ') || cu.username || 'User';
+        avatarUrl = cu.imageUrl ?? null;
+      }
     } catch {
-      return null;
+      // ignore — use Backend API fallback
     }
-    if (!cu) return null;
-    const email =
-      cu.emailAddresses.find((e) => e.id === cu.primaryEmailAddressId)?.emailAddress ??
-      cu.emailAddresses[0]?.emailAddress ??
-      `${clerkId}@users.clerk.local`;
-    const fullName =
-      [cu.firstName, cu.lastName].filter(Boolean).join(' ') || cu.username || 'User';
+
+    if (!email) {
+      const profile = await fetchClerkProfile(clerkId);
+      if (!profile) return null;
+      email = profile.email;
+      fullName = profile.fullName;
+      avatarUrl = profile.avatarUrl;
+    }
 
     // Re-link if a row exists for this email with a stale clerkId (e.g. after re-provision)
     const byEmail = await prisma.user.findFirst({
@@ -80,15 +121,17 @@ export async function ensurePrismaUser(): Promise<User | null> {
         });
         await prisma.user.delete({ where: { id: clash.id } }).catch(() => undefined);
       }
-      return prisma.user.update({
+      user = await prisma.user.update({
         where: { id: byEmail.id },
         data: {
           clerkId,
           email,
           fullName,
-          avatarUrl: cu.imageUrl ?? null,
+          avatarUrl,
         },
       });
+      await setAuthBridgeCookie(clerkId).catch(() => undefined);
+      return user;
     }
 
     user = await prisma.user.create({
@@ -96,9 +139,10 @@ export async function ensurePrismaUser(): Promise<User | null> {
         clerkId,
         email,
         fullName,
-        avatarUrl: cu.imageUrl ?? null,
+        avatarUrl,
       },
     });
+    await setAuthBridgeCookie(clerkId).catch(() => undefined);
     return user;
   }
 
@@ -119,8 +163,8 @@ export async function ensurePrismaUser(): Promise<User | null> {
   return null;
 }
 
-export const getWorkspaceContext = cache(async (): Promise<WorkspaceContext | null> => {
-  const user = await ensurePrismaUser();
+export const getWorkspaceContext = cache(async (options?: EnsureUserOptions): Promise<WorkspaceContext | null> => {
+  const user = await ensurePrismaUser(options);
   if (!user) return null;
 
   const cookieStore = await cookies();

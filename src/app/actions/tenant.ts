@@ -199,6 +199,8 @@ export async function clearTenantAndSignOut(): Promise<{ redirect: string }> {
   cookieStore.delete(WORKSPACE_COOKIE);
   cookieStore.delete(BRANCH_COOKIE);
   cookieStore.delete('tenant-id');
+  const { clearAuthBridgeCookie } = await import('@/server/clerk-bridge');
+  await clearAuthBridgeCookie();
   return { redirect: '/' };
 }
 
