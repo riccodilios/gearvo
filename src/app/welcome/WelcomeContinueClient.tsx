@@ -41,6 +41,7 @@ export function WelcomeContinueClient() {
   const { signOut } = useClerk();
   const [message, setMessage] = useState('Finishing sign-in…');
   const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
   const ran = useRef(false);
 
   const finish = async () => {
@@ -51,6 +52,9 @@ export function WelcomeContinueClient() {
       setMessage('Sign-in incomplete');
       return;
     }
+    if (hasClerkHandshakeParams()) {
+      window.history.replaceState({}, '', '/welcome');
+    }
     window.location.assign(result.destination);
   };
 
@@ -58,9 +62,10 @@ export function WelcomeContinueClient() {
     if (!isLoaded || ran.current) return;
 
     if (!isSignedIn) {
-      if (hasClerkHandshakeParams()) {
+      if (hasClerkHandshakeParams() && tick < 25) {
         setMessage('Completing secure handshake…');
-        return;
+        const t = window.setTimeout(() => setTick((n) => n + 1), 400);
+        return () => window.clearTimeout(t);
       }
       ran.current = true;
       window.location.replace('/sign-in');
@@ -70,12 +75,7 @@ export function WelcomeContinueClient() {
     ran.current = true;
     let cancelled = false;
 
-    (async () => {
-      if (hasClerkHandshakeParams()) {
-        window.history.replaceState({}, '', '/welcome');
-      }
-      await finish();
-    })().catch((err) => {
+    void finish().catch((err) => {
       console.error(err);
       if (!cancelled) {
         setError('Something went wrong finishing sign-in.');
@@ -87,7 +87,7 @@ export function WelcomeContinueClient() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, tick]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-950 px-4 text-center text-zinc-50">
@@ -100,6 +100,7 @@ export function WelcomeContinueClient() {
               type="button"
               onClick={() => {
                 ran.current = false;
+                setTick(0);
                 setError(null);
                 setMessage('Retrying…');
                 void finish().finally(() => {
