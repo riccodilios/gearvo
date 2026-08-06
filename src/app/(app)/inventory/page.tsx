@@ -29,18 +29,30 @@ export default async function InventoryPage({
   const filtered = parts;
 
   const margin = (retail: number, cost: number) =>
-    cost > 0 ? ((retail - cost) / cost * 100).toFixed(1) : '0';
+    cost > 0 ? (((retail - cost) / cost) * 100).toFixed(1) : '0';
   const isLowStock = (qty: number, min: number) => qty <= min;
 
+  const partEditPayload = (part: (typeof filtered)[number]) => ({
+    id: part.id,
+    name: part.name,
+    partNumber: part.partNumber,
+    supplierId: part.supplierId,
+    costPrice: Number(part.costPrice),
+    retailPrice: Number(part.retailPrice),
+    stockQuantity: part.stockQuantity,
+    minStockLevel: part.minStockLevel,
+    category: part.category,
+  });
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <PageHeader
         title="Inventory"
         description="Manage car parts and stock levels"
         actions={
           <CarPartFormDialog
             trigger={
-              <Button>
+              <Button className="w-full touch-manipulation sm:w-auto">
                 <Plus className="me-2 h-4 w-4" />
                 Add Part
               </Button>
@@ -61,85 +73,141 @@ export default async function InventoryPage({
           }
         />
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Part #</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead className="text-right">Stock</TableHead>
-                  <TableHead className="text-right">Cost</TableHead>
-                  <TableHead className="text-right">Retail</TableHead>
-                  <TableHead className="text-right">Margin</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((part) => (
-                <TableRow
-                    key={part.id}
-                    className={
-                      isLowStock(part.stockQuantity, part.minStockLevel)
-                        ? 'bg-amber-950/20'
-                        : ''
-                    }
-                  >
-                    <TableCell className="font-medium">{part.name}</TableCell>
-                    <TableCell className="text-zinc-500">
-                      {part.partNumber ?? '-'}
-                    </TableCell>
-                    <TableCell>{part.category ?? '-'}</TableCell>
-                    <TableCell>
-                      {part.supplier?.name ?? '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span
-                        className={
-                          isLowStock(part.stockQuantity, part.minStockLevel)
-                            ? 'flex items-center justify-end gap-1 font-medium text-amber-500'
-                            : ''
-                        }
-                      >
-                        {isLowStock(part.stockQuantity, part.minStockLevel) && (
-                          <AlertTriangle className="h-4 w-4" />
-                        )}
-                        {part.stockQuantity} / {part.minStockLevel}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(Number(part.costPrice))}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(Number(part.retailPrice))}
-                    </TableCell>
-                    <TableCell className="text-right text-emerald-500">
-                      {margin(Number(part.retailPrice), Number(part.costPrice))}%
-                    </TableCell>
-                    <TableCell>
-                      <CarPartFormDialog
-                      part={{
-                        id: part.id,
-                        name: part.name,
-                        partNumber: part.partNumber,
-                        supplierId: part.supplierId,
-                        costPrice: Number(part.costPrice),
-                        retailPrice: Number(part.retailPrice),
-                        stockQuantity: part.stockQuantity,
-                        minStockLevel: part.minStockLevel,
-                        category: part.category,
-                      }}
-                      trigger={<Button variant="ghost" size="sm">Edit</Button>}
+        <>
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {filtered.map((part) => {
+              const low = isLowStock(part.stockQuantity, part.minStockLevel);
+              return (
+                <div
+                  key={part.id}
+                  className={`rounded-xl border p-4 ${
+                    low
+                      ? 'border-amber-500/40 bg-amber-950/20'
+                      : 'border-zinc-800 bg-zinc-950/80'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-zinc-50">{part.name}</p>
+                      <p className="mt-0.5 truncate text-xs text-zinc-500">
+                        {[part.partNumber, part.category, part.supplier?.name]
+                          .filter(Boolean)
+                          .join(' · ') || '—'}
+                      </p>
+                    </div>
+                    <CarPartFormDialog
+                      part={partEditPayload(part)}
+                      trigger={
+                        <Button variant="ghost" size="sm" className="min-h-10 shrink-0 touch-manipulation">
+                          Edit
+                        </Button>
+                      }
                     />
-                    </TableCell>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <p className="text-[11px] text-zinc-500">Stock</p>
+                      <p
+                        className={`mt-0.5 flex items-center gap-1 font-medium tabular-nums ${
+                          low ? 'text-amber-500' : 'text-zinc-200'
+                        }`}
+                      >
+                        {low && <AlertTriangle className="h-3.5 w-3.5" />}
+                        {part.stockQuantity}/{part.minStockLevel}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-zinc-500">Retail</p>
+                      <p className="mt-0.5 font-medium tabular-nums text-zinc-200">
+                        {formatCurrency(Number(part.retailPrice))}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-zinc-500">Margin</p>
+                      <p className="mt-0.5 font-medium tabular-nums text-emerald-500">
+                        {margin(Number(part.retailPrice), Number(part.costPrice))}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Part #</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead className="text-right">Stock</TableHead>
+                    <TableHead className="text-right">Cost</TableHead>
+                    <TableHead className="text-right">Retail</TableHead>
+                    <TableHead className="text-right">Margin</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((part) => (
+                    <TableRow
+                      key={part.id}
+                      className={
+                        isLowStock(part.stockQuantity, part.minStockLevel)
+                          ? 'bg-amber-950/20'
+                          : ''
+                      }
+                    >
+                      <TableCell className="font-medium">{part.name}</TableCell>
+                      <TableCell className="text-zinc-500">
+                        {part.partNumber ?? '-'}
+                      </TableCell>
+                      <TableCell>{part.category ?? '-'}</TableCell>
+                      <TableCell>{part.supplier?.name ?? '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <span
+                          className={
+                            isLowStock(part.stockQuantity, part.minStockLevel)
+                              ? 'flex items-center justify-end gap-1 font-medium text-amber-500'
+                              : ''
+                          }
+                        >
+                          {isLowStock(part.stockQuantity, part.minStockLevel) && (
+                            <AlertTriangle className="h-4 w-4" />
+                          )}
+                          {part.stockQuantity} / {part.minStockLevel}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(Number(part.costPrice))}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(Number(part.retailPrice))}
+                      </TableCell>
+                      <TableCell className="text-right text-emerald-500">
+                        {margin(Number(part.retailPrice), Number(part.costPrice))}%
+                      </TableCell>
+                      <TableCell>
+                        <CarPartFormDialog
+                          part={partEditPayload(part)}
+                          trigger={
+                            <Button variant="ghost" size="sm">
+                              Edit
+                            </Button>
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

@@ -14,24 +14,45 @@ export function EmptyState({
   description,
   action,
   className,
+  compact,
   ...props
-}: EmptyStateProps) {
+}: EmptyStateProps & { compact?: boolean }) {
   return (
     <div
       className={cn(
-        'flex min-h-[280px] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/20 px-6 py-12 text-center sm:min-h-[360px]',
+        'flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-zinc-900/20 px-6 text-center',
+        compact
+          ? 'min-h-[140px] py-8'
+          : 'min-h-[280px] py-12 sm:min-h-[360px]',
         className
       )}
       {...props}
     >
       {icon ? (
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800/60 text-zinc-500">
+        <div
+          className={cn(
+            'mb-4 flex items-center justify-center rounded-full bg-zinc-800/60 text-zinc-500',
+            compact ? 'h-10 w-10' : 'h-12 w-12'
+          )}
+        >
           {icon}
         </div>
       ) : null}
-      <h3 className="font-display text-lg font-semibold text-zinc-100">{title}</h3>
+      <h3
+        className={cn(
+          'font-display font-semibold text-zinc-100',
+          compact ? 'text-base' : 'text-lg'
+        )}
+      >
+        {title}
+      </h3>
       {description && (
-        <p className="mt-2 mb-6 max-w-sm text-sm leading-relaxed text-zinc-400">
+        <p
+          className={cn(
+            'mt-2 max-w-sm text-sm leading-relaxed text-zinc-400',
+            action ? 'mb-6' : 'mb-0'
+          )}
+        >
           {description}
         </p>
       )}

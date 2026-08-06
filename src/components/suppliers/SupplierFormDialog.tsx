@@ -16,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createSupplier, updateSupplier } from '@/app/actions/suppliers';
 import { formError } from '@/lib/form-error';
+import { toast } from '@/lib/mutation-toast';
+import { useSubmitGuard } from '@/hooks/use-submit-guard';
 
 interface SupplierFormInitial {
   id: string;
@@ -38,50 +40,61 @@ export function SupplierFormDialog({ trigger, supplier, open: controlledOpen, on
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { loading, run } = useSubmitGuard();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     const formData = new FormData(e.currentTarget);
 
-    try {
-      const data = {
-        name: formData.get('name') as string,
-        contactPerson: (formData.get('contactPerson') as string) || undefined,
-        phone: (formData.get('phone') as string) || undefined,
-        email: (formData.get('email') as string) || undefined,
-        address: (formData.get('address') as string) || undefined,
-        notes: (formData.get('notes') as string) || undefined,
-      };
+    await run(async () => {
+      try {
+        const data = {
+          name: formData.get('name') as string,
+          contactPerson: (formData.get('contactPerson') as string) || undefined,
+          phone: (formData.get('phone') as string) || undefined,
+          email: (formData.get('email') as string) || undefined,
+          address: (formData.get('address') as string) || undefined,
+          notes: (formData.get('notes') as string) || undefined,
+        };
 
-      if (supplier) {
-        await updateSupplier(supplier.id, data);
-      } else {
-        await createSupplier(data);
+        if (supplier) {
+          await updateSupplier(supplier.id, data);
+        } else {
+          await createSupplier(data);
+        }
+        toast.success(supplier ? 'Supplier updated' : 'Supplier created');
+        setOpen(false);
+        router.refresh();
+      } catch (err) {
+        const msg = formError(err);
+        if (msg.includes('Database is not connected')) {
+          setError('setup');
+        } else {
+          setError(msg);
+          toast.error(msg);
+        }
       }
-      setOpen(false);
-      router.refresh();
-    } catch (err) {
-      const msg = formError(err);
-      if (msg.includes('Database is not connected')) {
-        setError('setup');
-      } else {
-        setError(msg);
-      }
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (loading) return;
+        setOpen(next);
+        if (!next) setError(null);
+      }}
+    >
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
+      <DialogContent
+        className="sm:max-w-[425px]"
+        onPointerDownOutside={(e) => loading && e.preventDefault()}
+        onEscapeKeyDown={(e) => loading && e.preventDefault()}
+      >        <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
               {supplier ? 'Edit Supplier' : 'Add Supplier'}

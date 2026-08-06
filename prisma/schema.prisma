@@ -388,6 +388,7 @@ model RepairOrder {
   @@unique([companyId, orderNumber])
   @@index([companyId, branchId, createdAt])
   @@index([companyId, status])
+  @@index([customerId, createdAt])
 }
 
 enum RepairOrderStatus {
@@ -447,6 +448,7 @@ model Invoice {
   @@unique([companyId, invoiceNumber])
   @@index([companyId, branchId, createdAt])
   @@index([companyId, status])
+  @@index([customerId, createdAt])
 }
 
 enum InvoiceStatus {
@@ -488,6 +490,7 @@ model Payment {
   receipts Receipt[]
 
   @@index([companyId, branchId, paymentDate])
+  @@index([customerId, paymentDate])
 }
 
 enum PaymentMethod {

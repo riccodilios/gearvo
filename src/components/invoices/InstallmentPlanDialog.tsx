@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { createInstallmentPlan, markInstallmentPaid } from '@/app/actions/invoices';
 import { formError } from '@/lib/form-error';
+import { toast } from '@/lib/mutation-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 
 export function InstallmentPlanDialog({
@@ -60,10 +71,13 @@ export function InstallmentPlanDialog({
             startTransition(async () => {
               try {
                 await createInstallmentPlan({ invoiceId, amounts, dueDates });
+                toast.success('Installment plan created');
                 setOpen(false);
                 router.refresh();
               } catch (err) {
-                setError(formError(err));
+                const msg = formError(err);
+                setError(msg);
+                toast.error(msg);
               }
             });
           }}
@@ -95,20 +109,59 @@ export function InstallmentPlanDialog({
 
 export function MarkInstallmentPaidButton({ installmentId }: { installmentId: string }) {
   const [pending, startTransition] = useTransition();
+  const [paid, setPaid] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const router = useRouter();
-  return (
-    <Button
-      size="sm"
-      variant="outline"
-      disabled={pending}
-      onClick={() =>
-        startTransition(async () => {
-          await markInstallmentPaid(installmentId);
-          router.refresh();
-        })
+
+  if (paid) {
+    return (
+      <span className="text-xs font-medium text-emerald-500 animate-in fade-in">Paid</span>
+    );
+  }
+
+  const confirmPaid = () => {
+    startTransition(async () => {
+      setPaid(true);
+      setConfirmOpen(false);
+      try {
+        await markInstallmentPaid(installmentId);
+        toast.success('Installment marked paid');
+        router.refresh();
+      } catch (err) {
+        setPaid(false);
+        toast.error(formError(err));
       }
-    >
-      {pending ? '…' : 'Mark paid'}
-    </Button>
+    });
+  };
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={pending}
+        className="min-h-10 touch-manipulation"
+        onClick={() => setConfirmOpen(true)}
+      >
+        {pending ? '…' : 'Mark paid'}
+      </Button>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark installment as paid?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This records the installment payment. Make sure the customer has paid
+              before confirming.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="w-full sm:w-auto" onClick={confirmPaid}>
+              Mark paid
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -52,15 +52,20 @@ export const repairOrderPartSchema = z.object({
   retailPrice: z.number().min(0),
 });
 
-// Repair Order
-export const repairOrderSchema = z.object({
-  customerId: z.string().min(1, 'Customer is required'),
-  vehicleId: z.string().min(1, 'Vehicle is required'),
-  description: z.string().optional(),
-  laborCost: z.number().min(0).default(0),
-  parts: z.array(repairOrderPartSchema).min(1, 'At least one part is required'),
-  notes: z.string().optional(),
-});
+// Repair Order — labor-only jobs allowed when no parts are used
+export const repairOrderSchema = z
+  .object({
+    customerId: z.string().min(1, 'Customer is required'),
+    vehicleId: z.string().min(1, 'Vehicle is required'),
+    description: z.string().optional(),
+    laborCost: z.number().min(0).default(0),
+    parts: z.array(repairOrderPartSchema).default([]),
+    notes: z.string().optional(),
+  })
+  .refine((data) => data.parts.length > 0 || data.laborCost > 0, {
+    message: 'Add labor cost or at least one part',
+    path: ['parts'],
+  });
 
 // Payment
 export const paymentSchema = z.object({

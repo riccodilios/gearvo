@@ -53,7 +53,14 @@ export async function getCustomers(options?: { q?: string; page?: number; pageSi
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: { vehicles: true, _count: { select: { repairOrders: true, invoices: true } } },
+      include: {
+        vehicles: {
+          where: { deletedAt: null },
+          select: { id: true, make: true, model: true, year: true },
+          take: 5,
+        },
+        _count: { select: { repairOrders: true, invoices: true } },
+      },
     }),
     prisma.customer.count({ where }),
   ]);
@@ -61,25 +68,120 @@ export async function getCustomers(options?: { q?: string; page?: number; pageSi
   return { items, total, page, pageSize };
 }
 
-export async function getCustomer(id: string) {
+const HISTORY_TAKE = 25;
+
+/** Lightweight profile for header / stats / contact — no history payload. */
+export async function getCustomerProfile(id: string) {
   const ctx = await getWorkspaceContext();
   if (!ctx) return null;
   return prisma.customer.findFirst({
     where: { id, ...accessibleWhere(ctx), deletedAt: null },
-    include: {
-      vehicles: { where: { deletedAt: null } },
-      repairOrders: {
-        where: { deletedAt: null },
-        orderBy: { createdAt: 'desc' },
-        include: { vehicle: true, invoice: true },
-      },
-      invoices: {
-        where: { deletedAt: null },
-        orderBy: { createdAt: 'desc' },
-        include: { payments: true },
+    select: {
+      id: true,
+      fullName: true,
+      phone: true,
+      email: true,
+      address: true,
+      tags: true,
+      notes: true,
+      totalSpent: true,
+      outstandingBalance: true,
+      _count: {
+        select: {
+          vehicles: { where: { deletedAt: null } },
+          repairOrders: { where: { deletedAt: null } },
+        },
       },
     },
   });
+}
+
+/** Tab history — limited rows + narrow selects, loaded in parallel. */
+export async function getCustomerHistory(id: string) {
+  const ctx = await getWorkspaceContext();
+  if (!ctx) return null;
+
+  const scoped = await prisma.customer.findFirst({
+    where: { id, ...accessibleWhere(ctx), deletedAt: null },
+    select: { id: true },
+  });
+  if (!scoped) return null;
+
+  const companyId = ctx.company.id;
+  const branchFilter = ctx.canAccessAllBranches
+    ? {}
+    : { branchId: { in: ctx.branchIds } };
+
+  const [vehicles, repairOrders, invoices, payments] = await Promise.all([
+    prisma.vehicle.findMany({
+      where: { customerId: id, companyId, deletedAt: null, ...branchFilter },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_TAKE,
+      select: {
+        id: true,
+        year: true,
+        make: true,
+        model: true,
+        color: true,
+        licensePlate: true,
+        mileage: true,
+      },
+    }),
+    prisma.repairOrder.findMany({
+      where: { customerId: id, companyId, deletedAt: null, ...branchFilter },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_TAKE,
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        totalPrice: true,
+        vehicle: { select: { make: true, model: true } },
+      },
+    }),
+    prisma.invoice.findMany({
+      where: { customerId: id, companyId, deletedAt: null, ...branchFilter },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_TAKE,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        createdAt: true,
+        totalAmount: true,
+        status: true,
+      },
+    }),
+    prisma.payment.findMany({
+      where: { customerId: id, companyId, ...branchFilter },
+      orderBy: { paymentDate: 'desc' },
+      take: HISTORY_TAKE,
+      select: {
+        id: true,
+        amount: true,
+        paymentDate: true,
+        method: true,
+        invoice: { select: { invoiceNumber: true } },
+      },
+    }),
+  ]);
+
+  return { vehicles, repairOrders, invoices, payments };
+}
+
+/** @deprecated Prefer getCustomerProfile + getCustomerHistory */
+export async function getCustomer(id: string) {
+  const [profile, history] = await Promise.all([
+    getCustomerProfile(id),
+    getCustomerHistory(id),
+  ]);
+  if (!profile || !history) return null;
+  return {
+    ...profile,
+    vehicles: history.vehicles,
+    repairOrders: history.repairOrders,
+    invoices: history.invoices,
+    payments: history.payments,
+  };
 }
 
 export async function createCustomer(data: CustomerInput) {

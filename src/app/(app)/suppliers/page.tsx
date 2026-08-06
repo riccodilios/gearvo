@@ -1,19 +1,10 @@
 import { getSuppliers } from '@/app/actions/suppliers';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
-import { Card, CardContent } from '@/components/ui/card';
 import { Package, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SupplierFormDialog } from '@/components/suppliers/SupplierFormDialog';
 import { SupplierCard } from '@/components/suppliers/SupplierCard';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { SuppliersSearch } from '@/components/suppliers/SuppliersSearch';
 
 export default async function SuppliersPage({

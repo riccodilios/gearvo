@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useState } from 'react';
 import { I18nProvider } from '@/i18n/provider';
+import { Toaster } from 'sonner';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -20,7 +21,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+        <TooltipProvider delayDuration={300}>
+          {children}
+          <Toaster
+            theme="dark"
+            position="bottom-right"
+            richColors
+            closeButton
+            toastOptions={{
+              classNames: {
+                toast: 'border border-zinc-800 bg-zinc-900 text-zinc-50',
+              },
+            }}
+          />
+        </TooltipProvider>
       </I18nProvider>
     </QueryClientProvider>
   );

@@ -4,10 +4,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useCallback, useTransition } from 'react';
+import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
+import { cn } from '@/lib/utils';
 
 export function SuppliersSearch() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -22,18 +25,26 @@ export function SuppliersSearch() {
     [searchParams]
   );
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    router.push(`/suppliers?${createQueryString('q', e.target.value)}`);
-  };
+  const pushSearch = useDebouncedCallback((value: string) => {
+    startTransition(() => {
+      router.push(`/suppliers?${createQueryString('q', value)}`);
+    });
+  }, 300);
 
   return (
-    <div className="relative max-w-sm">
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+    <div
+      className={cn(
+        'relative max-w-sm transition-opacity',
+        isPending && 'opacity-60 ring-1 ring-amber-500/30 rounded-md'
+      )}
+    >
+      <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
       <Input
         placeholder="Search by name or contact person..."
         defaultValue={searchParams.get('q') ?? ''}
-        onChange={handleSearch}
+        onChange={(e) => pushSearch(e.target.value)}
         className="ps-9"
+        aria-busy={isPending}
       />
     </div>
   );

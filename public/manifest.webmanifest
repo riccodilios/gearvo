@@ -4,11 +4,14 @@
   "description": "Automotive Business Operating System — نظام تشغيل أعمال السيارات",
   "start_url": "/dashboard",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#09090b",
   "theme_color": "#d97706",
-  "lang": "ar",
-  "dir": "rtl",
+  "lang": "en",
+  "dir": "auto",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-192.png",

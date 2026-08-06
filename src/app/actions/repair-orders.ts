@@ -146,9 +146,11 @@ export async function createRepairOrder(data: RepairOrderInput) {
       },
     });
 
-    await tx.repairOrderPart.createMany({
-      data: partData.map((p) => ({ ...p, repairOrderId: ro.id })),
-    });
+    if (partData.length > 0) {
+      await tx.repairOrderPart.createMany({
+        data: partData.map((p) => ({ ...p, repairOrderId: ro.id })),
+      });
+    }
 
     for (const p of parsed.parts) {
       const updated = await tx.carPart.updateMany({

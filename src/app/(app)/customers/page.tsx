@@ -4,11 +4,12 @@ import { EmptyState } from '@/components/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
-import Link from 'next/link';
 import { Users, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog';
 import { CustomersSearch } from '@/components/customers/CustomersSearch';
+import { PendingLink } from '@/components/ui/pending-link';
+import { CustomersFilterShell } from '@/components/customers/CustomersFilterShell';
 
 export default async function CustomersPage({
   searchParams,
@@ -24,7 +25,7 @@ export default async function CustomersPage({
   });
 
   return (
-    <div className="space-y-8">
+    <CustomersFilterShell>
       <PageHeader
         title="Customers"
         description={`${total} customers in this branch`}
@@ -60,12 +61,12 @@ export default async function CustomersPage({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {customers.map((customer) => (
-            <Link key={customer.id} href={`/customers/${customer.id}`}>
-              <Card className="transition-colors hover:border-amber-500/50">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold">{customer.fullName}</h3>
+            <PendingLink key={customer.id} href={`/customers/${customer.id}`}>
+              <Card className="transition-colors hover:border-amber-500/50 active:scale-[0.99]">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold">{customer.fullName}</h3>
                       {customer.phone && (
                         <p className="text-sm text-zinc-500">{customer.phone}</p>
                       )}
@@ -93,10 +94,10 @@ export default async function CustomersPage({
                   )}
                 </CardContent>
               </Card>
-            </Link>
+            </PendingLink>
           ))}
         </div>
       )}
-    </div>
+    </CustomersFilterShell>
   );
 }

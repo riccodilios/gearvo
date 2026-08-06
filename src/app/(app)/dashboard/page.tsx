@@ -29,13 +29,13 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <PageHeader
         title="Dashboard"
         description="Overview of your mechanic shop performance"
       />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
           title="Today's Revenue"
           value={formatCurrency(stats.revenueToday)}
@@ -59,7 +59,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Active Repairs</CardTitle>
@@ -154,22 +154,30 @@ export default async function DashboardPage() {
             <CardContent>
               <div className="space-y-4">
                 {recentOrders.length === 0 ? (
-                  <p className="text-sm text-zinc-500">No recent repair orders</p>
+                  <div className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center">
+                    <p className="text-sm text-zinc-500">No recent repair orders</p>
+                    <Link
+                      href="/repair-orders"
+                      className="mt-2 inline-block text-sm font-medium text-amber-500 hover:underline"
+                    >
+                      Create a repair order
+                    </Link>
+                  </div>
                 ) : (
                   recentOrders.map((order) => (
                     <Link
                       key={order.id}
                       href={`/repair-orders/${order.id}`}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800 p-3 transition-colors hover:bg-zinc-800/50"
+                      className="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 transition-colors active:bg-zinc-800/50 hover:bg-zinc-800/50 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-medium">{order.orderNumber}</p>
-                        <p className="text-sm text-zinc-500">
+                        <p className="truncate text-sm text-zinc-500">
                           {order.customer.fullName} • {order.vehicle.make}{' '}
                           {order.vehicle.model}
                         </p>
                       </div>
-                      <div className="text-right">
+                      <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:text-right">
                         <p className="font-medium">
                           {formatCurrency(Number(order.totalPrice))}
                         </p>

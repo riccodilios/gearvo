@@ -9,6 +9,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from '@/lib/mutation-toast';
+import { formError } from '@/lib/form-error';
 
 type Branch = {
   id: string;
@@ -29,7 +41,9 @@ export function BranchManager({
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [pending, startTransition] = useTransition();
+  const [archiveId, setArchiveId] = useState<string | null>(null);
   const router = useRouter();
+  const archiveTarget = branches.find((b) => b.id === archiveId);
 
   return (
     <Card>
@@ -41,14 +55,14 @@ export function BranchManager({
           {branches.map((b) => (
             <li
               key={b.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-800 px-3 py-2"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 px-3 py-3"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium">
                   {b.name}{' '}
-                  {b.isDefault && <Badge className="ml-1">Default</Badge>}
+                  {b.isDefault && <Badge className="ms-1">Default</Badge>}
                   {b.isArchived && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ms-1">
                       Archived
                     </Badge>
                   )}
@@ -62,11 +76,17 @@ export function BranchManager({
                 <Button
                   size="sm"
                   variant="outline"
+                  className="min-h-10 touch-manipulation"
                   disabled={pending || b.isArchived}
                   onClick={() =>
                     startTransition(async () => {
-                      await switchWorkspace(companyId, b.id);
-                      router.refresh();
+                      try {
+                        await switchWorkspace(companyId, b.id);
+                        toast.success(`Switched to ${b.name}`);
+                        router.refresh();
+                      } catch (err) {
+                        toast.error(formError(err));
+                      }
                     })
                   }
                 >
@@ -76,13 +96,9 @@ export function BranchManager({
                   <Button
                     size="sm"
                     variant="ghost"
+                    className="min-h-10 touch-manipulation"
                     disabled={pending}
-                    onClick={() =>
-                      startTransition(async () => {
-                        await archiveBranch(b.id);
-                        router.refresh();
-                      })
-                    }
+                    onClick={() => setArchiveId(b.id)}
                   >
                     Archive
                   </Button>
@@ -97,10 +113,15 @@ export function BranchManager({
           onSubmit={(e) => {
             e.preventDefault();
             startTransition(async () => {
-              await createBranch({ name, slug: slug || name });
-              setName('');
-              setSlug('');
-              router.refresh();
+              try {
+                await createBranch({ name, slug: slug || name });
+                setName('');
+                setSlug('');
+                toast.success('Branch created');
+                router.refresh();
+              } catch (err) {
+                toast.error(formError(err));
+              }
             });
           }}
         >
@@ -119,16 +140,57 @@ export function BranchManager({
               id="branch-slug"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              placeholder="auto from name"
+              placeholder="optional"
             />
           </div>
           <div className="flex items-end">
-            <Button type="submit" disabled={pending || !name}>
-              Add branch
+            <Button type="submit" disabled={pending || !name.trim()} className="w-full">
+              {pending ? 'Saving…' : 'Add branch'}
             </Button>
           </div>
         </form>
       </CardContent>
+
+      <AlertDialog
+        open={!!archiveId}
+        onOpenChange={(open) => !open && !pending && setArchiveId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive {archiveTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Archived branches are hidden from day-to-day switching. Existing data stays
+              intact.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="w-full sm:w-auto" disabled={pending}>
+              Keep active
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="w-full bg-red-600 hover:bg-red-700 sm:w-auto"
+              disabled={pending || !archiveId}
+              onClick={(e) => {
+                e.preventDefault();
+                if (!archiveId) return;
+                const id = archiveId;
+                startTransition(async () => {
+                  try {
+                    await archiveBranch(id);
+                    toast.success('Branch archived');
+                    setArchiveId(null);
+                    router.refresh();
+                  } catch (err) {
+                    toast.error(formError(err));
+                  }
+                });
+              }}
+            >
+              {pending ? 'Archiving…' : 'Archive'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

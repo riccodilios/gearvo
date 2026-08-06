@@ -29,6 +29,8 @@ export type WorkspaceContext = {
   user: User;
   company: Company;
   branch: Branch;
+  /** Non-archived branches the caller may switch into (already loaded with context). */
+  branches: Branch[];
   membership: Membership;
   role: AppRole;
   /** True only for platform admins and company-wide roles (Owner/Admin). */
@@ -248,6 +250,7 @@ export const getWorkspaceContext = cache(async (options?: EnsureUserOptions): Pr
     user,
     company,
     branch,
+    branches,
     membership,
     role: membership.role,
     canAccessAllBranches,
@@ -341,17 +344,29 @@ export async function getNavAccess(): Promise<{
   const ctx = await getWorkspaceContext();
   if (!ctx) return null;
 
-  // Heal companies that were created without feature flags
-  await ensureCompanyFeatureFlags(ctx.company.id, ctx.company.plan);
-
   const perms = ctx.user.isPlatformAdmin
     ? ([...PERMISSIONS] as Permission[])
     : [...permissionsForRole(ctx.role)];
 
-  const flags = await prisma.companyFeatureFlag.findMany({
+  // Single round-trip: read flags; seed only if company was created without any
+  let flags = await prisma.companyFeatureFlag.findMany({
     where: { companyId: ctx.company.id, enabled: true },
     select: { feature: true },
   });
+
+  if (flags.length === 0) {
+    const anyFlag = await prisma.companyFeatureFlag.findFirst({
+      where: { companyId: ctx.company.id },
+      select: { id: true },
+    });
+    if (!anyFlag) {
+      await ensureCompanyFeatureFlags(ctx.company.id, ctx.company.plan);
+      flags = await prisma.companyFeatureFlag.findMany({
+        where: { companyId: ctx.company.id, enabled: true },
+        select: { feature: true },
+      });
+    }
+  }
 
   return {
     permissions: perms,

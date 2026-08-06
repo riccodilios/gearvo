@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createVehicle } from '@/app/actions/vehicles';
 import { formError } from '@/lib/form-error';
+import { toast } from '@/lib/mutation-toast';
+import { useSubmitGuard } from '@/hooks/use-submit-guard';
 import { Car } from 'lucide-react';
 
 const currentYear = new Date().getFullYear();
@@ -27,39 +29,52 @@ interface AddVehicleDialogProps {
 
 export function AddVehicleDialog({ customerId, trigger }: AddVehicleDialogProps) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { loading, run } = useSubmitGuard();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     const formData = new FormData(e.currentTarget);
 
-    try {
-      const year = Number(formData.get('year'));
-      await createVehicle({
-        customerId,
-        make: (formData.get('make') as string).trim(),
-        model: (formData.get('model') as string).trim(),
-        year: Number.isNaN(year) ? currentYear : year,
-        color: (formData.get('color') as string)?.trim() || undefined,
-        licensePlate: (formData.get('licensePlate') as string)?.trim() || undefined,
-      });
-      setOpen(false);
-      router.refresh();
-    } catch (err) {
-      setError(formError(err));
-    } finally {
-      setLoading(false);
-    }
+    await run(async () => {
+      try {
+        const year = Number(formData.get('year'));
+        await createVehicle({
+          customerId,
+          make: (formData.get('make') as string).trim(),
+          model: (formData.get('model') as string).trim(),
+          year: Number.isNaN(year) ? currentYear : year,
+          color: (formData.get('color') as string)?.trim() || undefined,
+          licensePlate: (formData.get('licensePlate') as string)?.trim() || undefined,
+        });
+        toast.success('Vehicle added');
+        setOpen(false);
+        router.refresh();
+      } catch (err) {
+        const msg = formError(err);
+        setError(msg);
+        toast.error(msg);
+      }
+    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (loading) return;
+        setOpen(next);
+        if (!next) setError(null);
+      }}
+    >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        onPointerDownOutside={(e) => loading && e.preventDefault()}
+        onEscapeKeyDown={(e) => loading && e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Car className="h-5 w-5" />

@@ -1,12 +1,13 @@
-import Link from 'next/link';
 import { getRepairOrders } from '@/app/actions/repair-orders';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Wrench, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { PendingLink } from '@/components/ui/pending-link';
+import { EntityFilterShell } from '@/components/ui/EntityFilterShell';
 import { RepairOrderFormDialog } from '@/components/repair-orders/RepairOrderFormDialog';
 import { RepairOrderStatusSelect } from '@/components/repair-orders/RepairOrderStatusSelect';
 import { GenerateInvoiceButton } from '@/components/repair-orders/GenerateInvoiceButton';
@@ -42,7 +43,7 @@ export default async function RepairOrdersPage({
     : orders;
 
   return (
-    <div className="space-y-8">
+    <EntityFilterShell>
       <PageHeader
         title="Repair Orders"
         description="Manage repair jobs and track progress"
@@ -66,68 +67,126 @@ export default async function RepairOrdersPage({
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Wrench className="h-6 w-6" />}
-          title="No repair orders"
-          description="Create your first repair order to get started"
+          title={query || status !== 'all' ? 'No matching orders' : 'No repair orders'}
+          description={
+            query || status !== 'all'
+              ? 'Try a different search or clear filters'
+              : 'Create your first repair order to get started'
+          }
           action={
-            <RepairOrderFormDialog trigger={<Button>New Repair Order</Button>} />
+            !query && status === 'all' ? (
+              <RepairOrderFormDialog trigger={<Button>New Repair Order</Button>} />
+            ) : (
+              <Button asChild variant="outline">
+                <Link href="/repair-orders">Clear filters</Link>
+              </Button>
+            )
           }
         />
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Vehicle</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Profit</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">
-                      <Link
-                        href={`/repair-orders/${order.id}`}
-                        className="text-amber-500 hover:underline"
-                      >
-                        {order.orderNumber}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{order.customer.fullName}</TableCell>
-                    <TableCell>
-                      {order.vehicle.year} {order.vehicle.make}{' '}
-                      {order.vehicle.model}
-                    </TableCell>
-                    <TableCell>
-                      <RepairOrderStatusSelect
-                        orderId={order.id}
-                        currentStatus={order.status}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
+        <>
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {filtered.map((order) => (
+              <div
+                key={order.id}
+                className="rounded-xl border border-zinc-800 bg-zinc-950/80 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <PendingLink
+                      href={`/repair-orders/${order.id}`}
+                      className="text-base font-semibold text-amber-500"
+                    >
+                      {order.orderNumber}
+                    </PendingLink>
+                    <p className="mt-0.5 truncate text-sm text-zinc-300">
+                      {order.customer.fullName}
+                    </p>
+                    <p className="truncate text-xs text-zinc-500">
+                      {order.vehicle.year} {order.vehicle.make} {order.vehicle.model}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-end">
+                    <p className="font-semibold tabular-nums">
                       {formatCurrency(Number(order.totalPrice))}
-                    </TableCell>
-                    <TableCell className="text-right text-emerald-500">
+                    </p>
+                    <p className="text-xs text-emerald-500 tabular-nums">
                       {formatCurrency(Number(order.profit))}
-                    </TableCell>
-                    <TableCell>
-                      <GenerateInvoiceButton
-                        repairOrderId={order.id}
-                        hasInvoice={!!order.invoice}
-                      />
-                    </TableCell>
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <RepairOrderStatusSelect
+                    orderId={order.id}
+                    currentStatus={order.status}
+                  />
+                  <GenerateInvoiceButton
+                    repairOrderId={order.id}
+                    hasInvoice={!!order.invoice}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <Card className="hidden md:block">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Profit</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">
+                        <PendingLink
+                          href={`/repair-orders/${order.id}`}
+                          className="text-amber-500 hover:underline"
+                        >
+                          {order.orderNumber}
+                        </PendingLink>
+                      </TableCell>
+                      <TableCell>{order.customer.fullName}</TableCell>
+                      <TableCell>
+                        {order.vehicle.year} {order.vehicle.make}{' '}
+                        {order.vehicle.model}
+                      </TableCell>
+                      <TableCell>
+                        <RepairOrderStatusSelect
+                          orderId={order.id}
+                          currentStatus={order.status}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(Number(order.totalPrice))}
+                      </TableCell>
+                      <TableCell className="text-right text-emerald-500">
+                        {formatCurrency(Number(order.profit))}
+                      </TableCell>
+                      <TableCell>
+                        <GenerateInvoiceButton
+                          repairOrderId={order.id}
+                          hasInvoice={!!order.invoice}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
       )}
-    </div>
+    </EntityFilterShell>
   );
 }

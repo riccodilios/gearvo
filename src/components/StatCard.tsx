@@ -26,26 +26,26 @@ export function StatCard({
   return (
     <div
       className={cn(
-        'rounded-xl border border-zinc-800 bg-zinc-950/80 p-5 shadow-sm transition-colors hover:border-zinc-700 sm:p-6',
+        'rounded-xl border border-zinc-800 bg-zinc-950/80 p-3.5 shadow-sm transition-colors hover:border-zinc-700 sm:p-6',
         className
       )}
       {...props}
     >
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-zinc-400">{title}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium leading-snug text-zinc-400 sm:text-sm">{title}</p>
         {Icon && (
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-600/10 text-amber-500">
-            <Icon className="h-4 w-4" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-600/10 text-amber-500 sm:h-9 sm:w-9">
+            <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </div>
         )}
       </div>
-      <p className="mt-2 text-2xl font-bold text-zinc-50">{value}</p>
+      <p className="mt-2 break-words text-lg font-bold tabular-nums text-zinc-50 sm:text-2xl">{value}</p>
       {(description || trend) && (
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 sm:mt-2">
           {trend && (
             <span
               className={cn(
-                'text-sm font-medium',
+                'text-xs font-medium sm:text-sm',
                 trend.positive ? 'text-emerald-500' : 'text-red-500'
               )}
             >
@@ -54,10 +54,10 @@ export function StatCard({
             </span>
           )}
           {description && (
-            <span className="text-sm text-zinc-500">{description}</span>
+            <span className="text-xs text-zinc-500 sm:text-sm">{description}</span>
           )}
           {trend?.label && (
-            <span className="text-sm text-zinc-500">{trend.label}</span>
+            <span className="text-xs text-zinc-500 sm:text-sm">{trend.label}</span>
           )}
         </div>
       )}

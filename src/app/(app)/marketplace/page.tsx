@@ -3,7 +3,6 @@ import { gatePage } from '@/server/page-gate';
 import { FeatureModule } from '@prisma/client';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
-import { Card, CardContent } from '@/components/ui/card';
 import { ShoppingCart, Package } from 'lucide-react';
 import { MarketplaceSupplierOrder } from '@/components/marketplace/MarketplaceSupplierOrder';
 import { PurchaseOrdersList } from '@/components/marketplace/PurchaseOrdersList';
@@ -77,13 +76,12 @@ export default async function MarketplacePage() {
       <section>
         <h2 className="mb-4 text-lg font-semibold text-zinc-100">Your purchase orders</h2>
         {serializedOrders.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <ShoppingCart className="h-10 w-10 text-zinc-600" />
-              <p className="mt-2 text-sm text-zinc-500">No purchase orders yet</p>
-              <p className="text-xs text-zinc-600">Place an order above to see it here.</p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            compact
+            icon={<ShoppingCart className="h-5 w-5" />}
+            title="No purchase orders yet"
+            description="Place an order from a supplier above to track it here."
+          />
         ) : (
           <PurchaseOrdersList orders={serializedOrders} />
         )}

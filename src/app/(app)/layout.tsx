@@ -3,7 +3,6 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { PresentationDemoBanner } from '@/components/DemoBanner';
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 import { getWorkspaceContext, getNavAccess } from '@/server/auth';
-import { listBranches } from '@/app/actions/workspace';
 import { redirect } from 'next/navigation';
 import { DEMO_COMPANY_SLUG } from '@/server/demo-constants';
 
@@ -22,7 +21,6 @@ export default async function AppLayout({
     redirect('/welcome/setup');
   }
 
-  const branches = await listBranches();
   const isPresentationDemo = ctx.company.slug === DEMO_COMPANY_SLUG;
 
   return (
@@ -39,12 +37,12 @@ export default async function AppLayout({
             companyId={ctx.company.id}
             companyName={ctx.company.name}
             currentBranchId={ctx.branch.id}
-            branches={branches
-              .filter((b) => !b.isArchived)
-              .map((b) => ({ id: b.id, name: b.name }))}
+            branches={ctx.branches.map((b) => ({ id: b.id, name: b.name }))}
           />
         </AppHeader>
-        <div className="flex-1 p-4 pt-4 lg:p-8">{children}</div>
+        <div className="gearvo-page-enter flex-1 space-y-6 p-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-4 sm:space-y-8 lg:p-8">
+          {children}
+        </div>
       </Layout>
     </>
   );

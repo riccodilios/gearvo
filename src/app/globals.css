@@ -111,3 +111,46 @@ input, select, textarea {
 .cl-userButtonPopoverActionButton {
   color: #f4f4f5 !important;
 }
+
+/* —— Mobile / PWA shell —— */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Comfortable form controls on touch devices */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px !important; /* prevents iOS zoom on focus */
+    min-height: 2.75rem;
+  }
+}
+
+.safe-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.safe-pt {
+  padding-top: max(0px, env(safe-area-inset-top));
+}
+
+/* Horizontal scroll tables without page-level overflow */
+.table-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+/* Soft page enter for installed / mobile feel */
+@media (prefers-reduced-motion: no-preference) {
+  .gearvo-page-enter {
+    animation: gearvo-fade-up 0.35s ease both;
+  }
+}

@@ -143,6 +143,7 @@ export async function createCompanyWorkspace(
         user,
         company: created.company,
         branch: created.branch,
+        branches: [created.branch],
         membership: created.membership,
         role: 'COMPANY_OWNER',
         canAccessAllBranches: true,

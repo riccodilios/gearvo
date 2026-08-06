@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { RepairOrderStatusSelect } from '@/components/repair-orders/RepairOrderStatusSelect';
 import { GenerateInvoiceButton } from '@/components/repair-orders/GenerateInvoiceButton';
+import { PendingLink } from '@/components/ui/pending-link';
+import { ArrowLeft } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -27,12 +29,19 @@ export default async function RepairOrderDetailPage({
   if (!order) notFound();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
+      <PendingLink
+        href="/repair-orders"
+        className="inline-flex min-h-10 items-center gap-2 text-sm text-zinc-400 hover:text-amber-500"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Repair Orders
+      </PendingLink>
       <PageHeader
         title={order.orderNumber}
         description={order.description ?? 'Repair order details'}
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <RepairOrderStatusSelect orderId={order.id} currentStatus={order.status} />
             {!order.invoice && (
               <GenerateInvoiceButton repairOrderId={order.id} hasInvoice={false} />
@@ -59,7 +68,12 @@ export default async function RepairOrderDetailPage({
               {order.customer.fullName}
             </Link>
             {order.customer.phone && (
-              <p className="text-sm text-zinc-500">{order.customer.phone}</p>
+              <a
+                href={`tel:${order.customer.phone}`}
+                className="mt-1 block text-sm text-zinc-500 hover:text-amber-500"
+              >
+                {order.customer.phone}
+              </a>
             )}
           </CardContent>
         </Card>
@@ -88,21 +102,23 @@ export default async function RepairOrderDetailPage({
           <CardContent className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-zinc-500">Labor</span>
-              <span>{formatCurrency(Number(order.laborCost))}</span>
+              <span className="tabular-nums">{formatCurrency(Number(order.laborCost))}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Parts</span>
-              <span>{formatCurrency(Number(order.partsRetailTotal))}</span>
+              <span className="tabular-nums">
+                {formatCurrency(Number(order.partsRetailTotal))}
+              </span>
             </div>
             <div className="flex justify-between font-semibold">
               <span>Total</span>
-              <span className="text-amber-500">
+              <span className="tabular-nums text-amber-500">
                 {formatCurrency(Number(order.totalPrice))}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Profit</span>
-              <span className="text-emerald-400">
+              <span className="tabular-nums text-emerald-400">
                 {formatCurrency(Number(order.profit))}
               </span>
             </div>
@@ -119,30 +135,36 @@ export default async function RepairOrderDetailPage({
           <CardTitle>Parts used</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Part</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Cost</TableHead>
-                <TableHead>Retail</TableHead>
-                <TableHead>Line total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {order.parts.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>{p.carPart.name}</TableCell>
-                  <TableCell>{p.quantity}</TableCell>
-                  <TableCell>{formatCurrency(Number(p.costPrice))}</TableCell>
-                  <TableCell>{formatCurrency(Number(p.retailPrice))}</TableCell>
-                  <TableCell>
-                    {formatCurrency(Number(p.retailPrice) * p.quantity)}
-                  </TableCell>
+          {order.parts.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
+              Labor-only job — no parts were charged.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Part</TableHead>
+                  <TableHead>Qty</TableHead>
+                  <TableHead>Cost</TableHead>
+                  <TableHead>Retail</TableHead>
+                  <TableHead>Line total</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {order.parts.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell>{p.carPart.name}</TableCell>
+                    <TableCell>{p.quantity}</TableCell>
+                    <TableCell>{formatCurrency(Number(p.costPrice))}</TableCell>
+                    <TableCell>{formatCurrency(Number(p.retailPrice))}</TableCell>
+                    <TableCell>
+                      {formatCurrency(Number(p.retailPrice) * p.quantity)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

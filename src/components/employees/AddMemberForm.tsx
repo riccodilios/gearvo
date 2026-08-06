@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { addMember } from '@/app/actions/users';
 import { formError } from '@/lib/form-error';
+import { toast } from '@/lib/mutation-toast';
 import type { AppRole } from '@prisma/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,11 +55,14 @@ export function AddMemberForm({
                   role,
                   branchId: branchId || null,
                 });
+                toast.success('Employee added');
                 setEmail('');
                 setFullName('');
                 router.refresh();
               } catch (err) {
-                setError(formError(err));
+                const msg = formError(err);
+                setError(msg);
+                toast.error(msg);
               }
             });
           }}

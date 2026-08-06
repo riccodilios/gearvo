@@ -8,10 +8,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useFilterPending } from '@/components/ui/filter-pending';
 
 export function RepairOrdersFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { startTransition } = useFilterPending();
   const status = searchParams.get('status') ?? 'all';
 
   const handleChange = (value: string) => {
@@ -21,7 +23,9 @@ export function RepairOrdersFilter() {
     } else {
       params.set('status', value);
     }
-    router.push(`/repair-orders?${params.toString()}`);
+    startTransition(() => {
+      router.push(`/repair-orders?${params.toString()}`);
+    });
   };
 
   return (

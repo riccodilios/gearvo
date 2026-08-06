@@ -23,6 +23,7 @@ import {
 import { createCarPart, updateCarPart } from '@/app/actions/inventory';
 import { getSuppliersForSelect } from '@/app/actions/suppliers';
 import { formError } from '@/lib/form-error';
+import { toast } from '@/lib/mutation-toast';
 
 /** Serializable part fields for edit form (no Decimal/Date). */
 export type CarPartFormInitial = {
@@ -82,20 +83,32 @@ export function CarPartFormDialog({ trigger, part }: CarPartFormDialogProps) {
       } else {
         await createCarPart(data);
       }
+      toast.success(part ? 'Part updated' : 'Part created');
       setOpen(false);
       router.refresh();
     } catch (err) {
-      setError(formError(err));
+      const msg = formError(err);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (loading) return;
+        setOpen(next);
+      }}
+    >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
+      <DialogContent
+        className="sm:max-w-[500px]"
+        onPointerDownOutside={(e) => loading && e.preventDefault()}
+        onEscapeKeyDown={(e) => loading && e.preventDefault()}
+      >        <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{part ? 'Edit Part' : 'Add Part'}</DialogTitle>
           </DialogHeader>

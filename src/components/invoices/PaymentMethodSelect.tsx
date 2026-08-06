@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useOptimistic, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Select,
@@ -10,6 +10,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { updatePaymentMethod } from '@/app/actions/invoices';
+import { runMutation } from '@/lib/mutation-toast';
+import { cn } from '@/lib/utils';
 
 const METHODS = [
   { value: 'CASH', label: 'Cash' },
@@ -25,31 +27,49 @@ interface PaymentMethodSelectProps {
   currentMethod: string;
 }
 
-export function PaymentMethodSelect({ paymentId, currentMethod }: PaymentMethodSelectProps) {
-  const [loading, setLoading] = useState(false);
+export function PaymentMethodSelect({
+  paymentId,
+  currentMethod,
+}: PaymentMethodSelectProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [optimisticMethod, setOptimisticMethod] = useOptimistic(
+    currentMethod,
+    (_current, next: string) => next
+  );
 
-  const handleChange = async (value: string) => {
-    setLoading(true);
-    try {
-      await updatePaymentMethod(paymentId, value as (typeof METHODS)[number]['value']);
+  const handleChange = (value: string) => {
+    if (value === optimisticMethod) return;
+    startTransition(async () => {
+      setOptimisticMethod(value);
+      const ok = await runMutation(
+        () =>
+          updatePaymentMethod(
+            paymentId,
+            value as (typeof METHODS)[number]['value']
+          ),
+        { success: 'Payment method updated' }
+      );
+      if (!ok) {
+        router.refresh();
+        return;
+      }
       router.refresh();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
-  const label = METHODS.find((m) => m.value === currentMethod)?.label ?? currentMethod;
+  const label =
+    METHODS.find((m) => m.value === optimisticMethod)?.label ?? optimisticMethod;
 
   return (
     <Select
-      value={currentMethod}
+      value={optimisticMethod}
       onValueChange={handleChange}
-      disabled={loading}
+      disabled={isPending}
     >
-      <SelectTrigger className="w-[130px] h-8">
+      <SelectTrigger
+        className={cn('h-8 w-[130px] transition-opacity', isPending && 'opacity-60')}
+      >
         <SelectValue>{label}</SelectValue>
       </SelectTrigger>
       <SelectContent>

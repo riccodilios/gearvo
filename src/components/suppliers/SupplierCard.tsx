@@ -22,7 +22,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { SupplierFormDialog } from './SupplierFormDialog';
 import { deleteSupplier } from '@/app/actions/suppliers';
+import { formError } from '@/lib/form-error';
+import { toast } from '@/lib/mutation-toast';
+import { useSubmitGuard } from '@/hooks/use-submit-guard';
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface SupplierCardProps {
   supplier: {
@@ -40,17 +44,35 @@ interface SupplierCardProps {
 export function SupplierCard({ supplier }: SupplierCardProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const { loading, run } = useSubmitGuard();
   const router = useRouter();
 
-  const handleDelete = async () => {
-    await deleteSupplier(supplier.id);
-    setDeleteOpen(false);
-    router.refresh();
+  const handleDelete = () => {
+    void run(async () => {
+      setHidden(true);
+      setDeleteOpen(false);
+      try {
+        await deleteSupplier(supplier.id);
+        toast.success('Supplier deleted');
+        router.refresh();
+      } catch (err) {
+        setHidden(false);
+        toast.error(formError(err));
+      }
+    });
   };
+
+  if (hidden) return null;
 
   return (
     <>
-      <Card className="transition-colors hover:border-zinc-700">
+      <Card
+        className={cn(
+          'transition-all hover:border-zinc-700 active:scale-[0.99]',
+          loading && 'opacity-50'
+        )}
+      >
         <CardContent className="p-6">
           <div className="flex items-start justify-between">
             <div>
@@ -61,7 +83,7 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" disabled={loading}>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -103,17 +125,21 @@ export function SupplierCard({ supplier }: SupplierCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete supplier?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove {supplier.name} from your suppliers. Parts linked
-              to this supplier will be unlinked but not deleted.
+              This will remove {supplier.name} from your suppliers. Parts linked to this
+              supplier will be unlinked but not deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={loading}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete
+              {loading ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

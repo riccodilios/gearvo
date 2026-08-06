@@ -15,7 +15,7 @@ export default function Layout({
   isPlatformAdmin?: boolean;
 }) {
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-dvh bg-zinc-950">
       <Sidebar
         shopName={shopName}
         permissions={permissions}
@@ -23,7 +23,9 @@ export default function Layout({
         isPlatformAdmin={isPlatformAdmin}
       />
       <main className="lg:ps-64">
-        <div className="flex min-h-screen flex-col">{children}</div>
+        <div className="flex min-h-dvh flex-col pb-[env(safe-area-inset-bottom)]">
+          {children}
+        </div>
       </main>
     </div>
   );

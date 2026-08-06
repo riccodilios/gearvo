@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createPurchaseOrder } from '@/app/actions/marketplace';
 import { formError } from '@/lib/form-error';
+import { toast } from '@/lib/mutation-toast';
 import { formatCurrency } from '@/lib/utils';
 import { ShoppingCart } from 'lucide-react';
 
@@ -30,6 +32,7 @@ export function MarketplaceSupplierOrder({ supplier }: { supplier: Supplier }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const toNum = (v: unknown): number =>
     typeof v === 'number' ? v : Number(String(v));
@@ -56,8 +59,12 @@ export function MarketplaceSupplierOrder({ supplier }: { supplier: Supplier }) {
         })),
       });
       setQuantities({});
+      toast.success(`Order placed with ${supplier.name}`);
+      router.refresh();
     } catch (err) {
-      setError(formError(err));
+      const msg = formError(err);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -80,12 +87,15 @@ export function MarketplaceSupplierOrder({ supplier }: { supplier: Supplier }) {
             {supplier.carParts.map((part) => (
               <div
                 key={part.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded border border-zinc-800 bg-zinc-900/50 p-2"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-zinc-200">{part.name}</p>
                   <p className="text-xs text-zinc-500">
                     {part.partNumber ?? '—'} · {formatCurrency(toNum(part.costPrice))} each
+                    {part.stockQuantity <= part.minStockLevel && (
+                      <span className="ms-1 text-amber-500">· low stock</span>
+                    )}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -96,7 +106,8 @@ export function MarketplaceSupplierOrder({ supplier }: { supplier: Supplier }) {
                     id={`qty-${part.id}`}
                     type="number"
                     min={0}
-                    className="w-20"
+                    inputMode="numeric"
+                    className="h-11 w-20 touch-manipulation"
                     value={quantities[part.id] ?? ''}
                     onChange={(e) =>
                       setQuantities((prev) => ({
@@ -112,10 +123,10 @@ export function MarketplaceSupplierOrder({ supplier }: { supplier: Supplier }) {
           <Button
             type="submit"
             disabled={loading || lines.length === 0}
-            className="w-full"
+            className="h-11 w-full touch-manipulation"
           >
             <ShoppingCart className="me-2 h-4 w-4" />
-            {loading ? 'Placing order...' : `Place order (${lines.length} lines)`}
+            {loading ? 'Placing order…' : `Place order (${lines.length} lines)`}
           </Button>
         </form>
       </CardContent>
