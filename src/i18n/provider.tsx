@@ -7,7 +7,6 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { useRouter } from 'next/navigation';
 import { getDictionary, type Locale } from '@/i18n/dictionaries';
 
 type I18nContextValue = {
@@ -88,7 +87,14 @@ export function useI18n() {
 
 export function LanguageSwitcher({ className }: { className?: string } = {}) {
   const { locale, setLocale, t } = useI18n();
-  const router = useRouter();
+
+  const switchLocale = (next: Locale) => {
+    if (next === locale) return;
+    // Persist cookie + localStorage, flip dir immediately, then reload so
+    // server-rendered cards/details on this page re-read the locale cookie.
+    setLocale(next);
+    window.location.reload();
+  };
 
   return (
     <div
@@ -99,20 +105,14 @@ export function LanguageSwitcher({ className }: { className?: string } = {}) {
       <button
         type="button"
         className={`rounded-full px-1.5 py-1 font-medium touch-manipulation sm:rounded sm:px-2.5 sm:py-1.5 ${locale === 'en' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
-        onClick={() => {
-          setLocale('en');
-          router.refresh();
-        }}
+        onClick={() => switchLocale('en')}
       >
         EN
       </button>
       <button
         type="button"
         className={`rounded-full px-1.5 py-1 font-medium touch-manipulation sm:rounded sm:px-2.5 sm:py-1.5 ${locale === 'ar' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
-        onClick={() => {
-          setLocale('ar');
-          router.refresh();
-        }}
+        onClick={() => switchLocale('ar')}
       >
         ع
       </button>
