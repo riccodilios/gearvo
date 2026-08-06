@@ -8,8 +8,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  # Keep open tabs on the deploy they loaded (avoids stale Server Action IDs).
-  NETLIFY_NEXT_SKEW_PROTECTION = "true"
+  # Skew protection was pinning open tabs to older broken auth deploys.
+  NETLIFY_NEXT_SKEW_PROTECTION = "false"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

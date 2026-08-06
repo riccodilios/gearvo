@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -27,12 +26,6 @@ async function continueAfterAuth(sessionToken: string | null): Promise<ContinueR
   };
 }
 
-async function clearBridge() {
-  await fetch('/api/auth/continue', { method: 'DELETE', credentials: 'same-origin' }).catch(
-    () => undefined
-  );
-}
-
 function hasClerkHandshakeParams() {
   if (typeof window === 'undefined') return false;
   const q = new URLSearchParams(window.location.search);
@@ -46,7 +39,6 @@ function hasClerkHandshakeParams() {
 export function WelcomeContinueClient() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { signOut } = useClerk();
-  const router = useRouter();
   const [message, setMessage] = useState('Finishing sign-in…');
   const [error, setError] = useState<string | null>(null);
   const ran = useRef(false);
@@ -59,7 +51,7 @@ export function WelcomeContinueClient() {
       setMessage('Sign-in incomplete');
       return;
     }
-    router.replace(result.destination);
+    window.location.assign(result.destination);
   };
 
   useEffect(() => {
@@ -71,7 +63,7 @@ export function WelcomeContinueClient() {
         return;
       }
       ran.current = true;
-      router.replace('/sign-in');
+      window.location.replace('/sign-in');
       return;
     }
 
@@ -95,7 +87,7 @@ export function WelcomeContinueClient() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn, router]);
+  }, [isLoaded, isSignedIn]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-950 px-4 text-center text-zinc-50">
@@ -121,7 +113,22 @@ export function WelcomeContinueClient() {
               type="button"
               variant="outline"
               onClick={() => {
-                void clearBridge().finally(() => signOut({ redirectUrl: '/sign-in' }));
+                void (async () => {
+                  try {
+                    await fetch('/api/auth/continue', {
+                      method: 'DELETE',
+                      credentials: 'same-origin',
+                    });
+                  } catch {
+                    // ignore
+                  }
+                  try {
+                    await signOut();
+                  } catch {
+                    // ignore
+                  }
+                  window.location.assign('/sign-in');
+                })();
               }}
             >
               Sign out

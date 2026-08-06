@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { SignIn, SignedIn, SignedOut, useAuth, useClerk, useUser } from '@clerk/nextjs';
 import { AuthChrome } from '@/components/i18n/AuthChrome';
 import { useI18n } from '@/i18n/provider';
@@ -41,37 +40,52 @@ async function continueAfterAuth(sessionToken: string | null) {
   };
 }
 
+/** Full page reload sign-out — never use Server Actions or startTransition here. */
+async function hardSignOut(
+  signOut: (opts?: { redirectUrl?: string }) => Promise<unknown>,
+  redirectTo: string
+) {
+  try {
+    await fetch('/api/auth/continue', { method: 'DELETE', credentials: 'same-origin' });
+  } catch {
+    // ignore
+  }
+  try {
+    await signOut();
+  } catch {
+    // ignore — still force navigation
+  }
+  window.location.assign(redirectTo);
+}
+
 function AlreadySignedIn() {
   const { user } = useUser();
   const { signOut } = useClerk();
   const { getToken } = useAuth();
   const { t, locale } = useI18n();
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? '';
   const isDemo = DEMO_EMAILS.has(email);
 
-  const continueToApp = () => {
+  const continueToApp = async () => {
     setError(null);
-    startTransition(async () => {
+    setPending(true);
+    try {
       const sessionToken = await getToken().catch(() => null);
       const result = await continueAfterAuth(sessionToken);
       if (result.error && result.destination === '/sign-in') {
         setError(result.error);
         return;
       }
-      router.push(result.destination);
-    });
-  };
-
-  const handleSignOut = () => {
-    startTransition(async () => {
-      await fetch('/api/auth/continue', { method: 'DELETE', credentials: 'same-origin' }).catch(
-        () => undefined
-      );
-      await signOut({ redirectUrl: '/sign-in' });
-    });
+      // Hard navigation avoids RSC/action skew after auth bridge cookie is set
+      window.location.assign(result.destination);
+    } catch (err) {
+      console.error(err);
+      setError('Could not continue. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
@@ -89,7 +103,15 @@ function AlreadySignedIn() {
       )}
       {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
       <div className="mt-6 flex flex-col gap-2">
-        <Button type="button" className="w-full" disabled={pending} onClick={handleSignOut}>
+        <Button
+          type="button"
+          className="w-full"
+          disabled={pending}
+          onClick={() => {
+            setPending(true);
+            void hardSignOut(signOut, '/sign-in');
+          }}
+        >
           {locale === 'ar' ? 'تسجيل الخروج ثم تسجيل الدخول' : 'Sign out, then sign in'}
         </Button>
         {!isDemo && (
@@ -98,7 +120,7 @@ function AlreadySignedIn() {
             variant="outline"
             className="w-full"
             disabled={pending}
-            onClick={continueToApp}
+            onClick={() => void continueToApp()}
           >
             {pending ? '…' : t.onboarding.goDashboard}
           </Button>
