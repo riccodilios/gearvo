@@ -84,23 +84,23 @@ export function LanguageSwitcher({ className }: { className?: string } = {}) {
   const { locale, setLocale, t } = useI18n();
   return (
     <div
-      className={`flex gap-1 rounded-lg border border-zinc-700 bg-zinc-950/95 p-1 text-xs backdrop-blur ${className ?? ''}`}
+      className={`flex gap-0.5 rounded-full border border-zinc-800/80 bg-zinc-900/80 p-0.5 text-[10px] backdrop-blur sm:gap-1 sm:rounded-lg sm:p-1 sm:text-xs ${className ?? ''}`}
       role="group"
       aria-label={t.common.language}
     >
       <button
         type="button"
-        className={`rounded px-2.5 py-1.5 font-medium ${locale === 'en' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
+        className={`rounded-full px-1.5 py-1 font-medium touch-manipulation sm:rounded sm:px-2.5 sm:py-1.5 ${locale === 'en' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
         onClick={() => setLocale('en')}
       >
         EN
       </button>
       <button
         type="button"
-        className={`rounded px-2.5 py-1.5 font-medium ${locale === 'ar' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
+        className={`rounded-full px-1.5 py-1 font-medium touch-manipulation sm:rounded sm:px-2.5 sm:py-1.5 ${locale === 'ar' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
         onClick={() => setLocale('ar')}
       >
-        العربية
+        ع
       </button>
     </div>
   );

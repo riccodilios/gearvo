@@ -128,6 +128,56 @@ export async function getDashboardStats() {
   };
 }
 
+/** Lean stats for analytics — avoids the 11-query dashboard payload. */
+export async function getAnalyticsSummary() {
+  const ctx = await getWorkspaceContext();
+  if (!ctx) {
+    return {
+      revenueMonth: 0,
+      profitMonth: 0,
+      outstanding: 0,
+      forecastNextMonth: 0,
+    };
+  }
+
+  const scope = branchScope(ctx);
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [paymentsMonth, repairsMonth, outstandingAgg] = await Promise.all([
+    prisma.payment.aggregate({
+      where: { ...scope, paymentDate: { gte: startOfMonth } },
+      _sum: { amount: true },
+    }),
+    prisma.repairOrder.aggregate({
+      where: {
+        ...scope,
+        deletedAt: null,
+        createdAt: { gte: startOfMonth },
+        status: { in: ['COMPLETED', 'DELIVERED'] },
+      },
+      _sum: { profit: true },
+    }),
+    prisma.invoice.aggregate({
+      where: {
+        ...scope,
+        deletedAt: null,
+        status: { in: ['UNPAID', 'PARTIAL', 'OVERDUE'] },
+      },
+      _sum: { remainingBalance: true },
+    }),
+  ]);
+
+  const revenueMonth = Number(paymentsMonth._sum.amount ?? 0);
+  return {
+    revenueMonth,
+    profitMonth: Number(repairsMonth._sum.profit ?? 0),
+    outstanding: Number(outstandingAgg._sum.remainingBalance ?? 0),
+    forecastNextMonth: revenueMonth * 1.05,
+  };
+}
+
 export async function getRevenueTrend(months = 6) {
   const ctx = await getWorkspaceContext();
   if (!ctx) return [];
@@ -135,64 +185,95 @@ export async function getRevenueTrend(months = 6) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
 
-  const payments = await prisma.payment.findMany({
-    where: { ...scope, paymentDate: { gte: start } },
-    select: { amount: true, paymentDate: true },
-  });
-  const repairs = await prisma.repairOrder.findMany({
-    where: {
-      ...scope,
-      deletedAt: null,
-      createdAt: { gte: start },
-      status: { in: ['COMPLETED', 'DELIVERED'] },
-    },
-    select: { profit: true, createdAt: true },
-  });
+  const [paymentRows, profitRows] = await Promise.all([
+    prisma.$queryRaw<{ month: Date; revenue: number }[]>`
+      SELECT date_trunc('month', "paymentDate") AS month,
+             COALESCE(SUM(amount), 0)::float AS revenue
+      FROM "Payment"
+      WHERE "companyId" = ${scope.companyId}
+        AND "branchId" = ${scope.branchId}
+        AND "paymentDate" >= ${start}
+      GROUP BY 1
+      ORDER BY 1
+    `,
+    prisma.$queryRaw<{ month: Date; profit: number }[]>`
+      SELECT date_trunc('month', "createdAt") AS month,
+             COALESCE(SUM(profit), 0)::float AS profit
+      FROM "RepairOrder"
+      WHERE "companyId" = ${scope.companyId}
+        AND "branchId" = ${scope.branchId}
+        AND "deletedAt" IS NULL
+        AND "createdAt" >= ${start}
+        AND status IN ('COMPLETED', 'DELIVERED')
+      GROUP BY 1
+      ORDER BY 1
+    `,
+  ]);
+
+  const revenueByKey = new Map(
+    paymentRows.map((r) => [monthKey(r.month), Number(r.revenue)])
+  );
+  const profitByKey = new Map(
+    profitRows.map((r) => [monthKey(r.month), Number(r.profit)])
+  );
 
   const result: { month: string; revenue: number; profit: number }[] = [];
   for (let i = months - 1; i >= 0; i--) {
     const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const mEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-    const revenue = payments
-      .filter((p) => p.paymentDate >= mStart && p.paymentDate < mEnd)
-      .reduce((s, p) => s + Number(p.amount), 0);
-    const profit = repairs
-      .filter((r) => r.createdAt >= mStart && r.createdAt < mEnd)
-      .reduce((s, r) => s + Number(r.profit), 0);
+    const key = monthKey(mStart);
     result.push({
       month: mStart.toLocaleString('en', { month: 'short', year: '2-digit' }),
-      revenue,
-      profit,
+      revenue: revenueByKey.get(key) ?? 0,
+      profit: profitByKey.get(key) ?? 0,
     });
   }
   return result;
 }
 
-export async function getDailyRevenue(days = 14) {
+/** Daily revenue. Pass `days` for a rolling window, or omit for current calendar month. */
+export async function getDailyRevenue(days?: number) {
   const ctx = await getWorkspaceContext();
   if (!ctx) return [];
   const scope = branchScope(ctx);
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
+  const start =
+    days != null
+      ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1))
+      : new Date(now.getFullYear(), now.getMonth(), 1);
+  start.setHours(0, 0, 0, 0);
 
-  const payments = await prisma.payment.findMany({
-    where: { ...scope, paymentDate: { gte: start } },
-    select: { amount: true, paymentDate: true },
-  });
+  const rows = await prisma.$queryRaw<{ day: Date; revenue: number }[]>`
+    SELECT date_trunc('day', "paymentDate") AS day,
+           COALESCE(SUM(amount), 0)::float AS revenue
+    FROM "Payment"
+    WHERE "companyId" = ${scope.companyId}
+      AND "branchId" = ${scope.branchId}
+      AND "paymentDate" >= ${start}
+    GROUP BY 1
+    ORDER BY 1
+  `;
 
+  const byDay = new Map(rows.map((r) => [dayKey(r.day), Number(r.revenue)]));
   const result: { date: string; revenue: number }[] = [];
-  for (let i = days - 1; i >= 0; i--) {
-    const dStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const dEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i + 1);
-    const revenue = payments
-      .filter((p) => p.paymentDate >= dStart && p.paymentDate < dEnd)
-      .reduce((s, p) => s + Number(p.amount), 0);
+  const cursor = new Date(start);
+  while (cursor <= now) {
     result.push({
-      date: dStart.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
-      revenue,
+      date: cursor.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+      revenue: byDay.get(dayKey(cursor)) ?? 0,
     });
+    cursor.setDate(cursor.getDate() + 1);
   }
   return result;
+}
+
+function monthKey(d: Date) {
+  const x = new Date(d);
+  return `${x.getFullYear()}-${x.getMonth()}`;
+}
+
+function dayKey(d: Date) {
+  const x = new Date(d);
+  return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
 }
 
 export async function getPaymentMethodsStats() {
@@ -256,44 +337,47 @@ export async function getBranchComparison() {
   const ctx = await getWorkspaceContext();
   if (!ctx || !ctx.canAccessAllBranches) return [];
 
-  const branches = await prisma.branch.findMany({
-    where: { companyId: ctx.company.id, isArchived: false, deletedAt: null },
-  });
-
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
+  const companyId = ctx.company.id;
 
-  return Promise.all(
-    branches.map(async (b) => {
-      const [revenue, repairs, customers] = await Promise.all([
-        prisma.payment.aggregate({
-          where: {
-            companyId: ctx.company.id,
-            branchId: b.id,
-            paymentDate: { gte: startOfMonth },
-          },
-          _sum: { amount: true },
-        }),
-        prisma.repairOrder.count({
-          where: {
-            companyId: ctx.company.id,
-            branchId: b.id,
-            deletedAt: null,
-            createdAt: { gte: startOfMonth },
-          },
-        }),
-        prisma.customer.count({
-          where: { companyId: ctx.company.id, branchId: b.id, deletedAt: null },
-        }),
-      ]);
-      return {
-        branchId: b.id,
-        branchName: b.name,
-        revenue: Number(revenue._sum.amount ?? 0),
-        repairs,
-        customers,
-      };
-    })
+  const [branches, revenueRows, repairRows, customerRows] = await Promise.all([
+    prisma.branch.findMany({
+      where: { companyId, isArchived: false, deletedAt: null },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.payment.groupBy({
+      by: ['branchId'],
+      where: { companyId, paymentDate: { gte: startOfMonth } },
+      _sum: { amount: true },
+    }),
+    prisma.repairOrder.groupBy({
+      by: ['branchId'],
+      where: { companyId, deletedAt: null, createdAt: { gte: startOfMonth } },
+      _count: { _all: true },
+    }),
+    prisma.customer.groupBy({
+      by: ['branchId'],
+      where: { companyId, deletedAt: null },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const revenueBy = new Map(
+    revenueRows.map((r) => [r.branchId, Number(r._sum.amount ?? 0)])
   );
+  const repairsBy = new Map(repairRows.map((r) => [r.branchId, r._count._all]));
+  const customersBy = new Map(
+    customerRows.map((r) => [r.branchId, r._count._all])
+  );
+
+  return branches.map((b) => ({
+    branchId: b.id,
+    branchName: b.name,
+    revenue: revenueBy.get(b.id) ?? 0,
+    repairs: repairsBy.get(b.id) ?? 0,
+    customers: customersBy.get(b.id) ?? 0,
+  }));
 }

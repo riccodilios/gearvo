@@ -1,5 +1,6 @@
+import { Suspense } from 'react';
 import {
-  getDashboardStats,
+  getAnalyticsSummary,
   getRevenueTrend,
   getDailyRevenue,
   getPaymentMethodsStats,
@@ -17,101 +18,61 @@ import { RevenueVsProfitChart } from '@/components/analytics/RevenueVsProfitChar
 import { DailyRevenueChart } from '@/components/analytics/DailyRevenueChart';
 import { PaymentMethodsChart } from '@/components/analytics/PaymentMethodsChart';
 import { RevenueByCategoryChart } from '@/components/analytics/RevenueByCategoryChart';
+import { Skeleton } from '@/components/skeletons/PageSkeletons';
 
-export default async function AnalyticsPage() {
-  await gatePage('analytics:read', FeatureModule.ANALYTICS);
-  const [stats, revenueTrend, dailyRevenue, paymentMethods, revenueByCategory, branchCompare] =
-    await Promise.all([
-      getDashboardStats(),
-      getRevenueTrend(12),
-      getDailyRevenue(),
-      getPaymentMethodsStats(),
-      getRevenueByCategory(),
-      getBranchComparison(),
-    ]);
-
+function StatsSkeleton() {
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Analytics"
-        description="Business intelligence and projections"
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      {[1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-24 rounded-xl" />
+      ))}
+    </div>
+  );
+}
+
+function ChartCardSkeleton({ className }: { className?: string }) {
+  return <Skeleton className={`h-[280px] w-full rounded-xl ${className ?? ''}`} />;
+}
+
+async function AnalyticsStats() {
+  const stats = await getAnalyticsSummary();
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <StatCard
+        title="This Month Revenue"
+        value={formatCurrency(stats.revenueMonth)}
+        icon={DollarSign}
       />
+      <StatCard
+        title="Monthly Profit"
+        value={formatCurrency(stats.profitMonth)}
+        icon={TrendingUp}
+      />
+      <StatCard
+        title="Outstanding Balance"
+        value={formatCurrency(stats.outstanding)}
+        icon={BarChart3}
+      />
+      <StatCard
+        title="Next Month Forecast"
+        value={formatCurrency(stats.forecastNextMonth)}
+        icon={TrendingUp}
+      />
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard
-          title="This Month Revenue"
-          value={formatCurrency(stats.revenueMonth)}
-          icon={DollarSign}
-        />
-        <StatCard
-          title="Monthly Profit"
-          value={formatCurrency(stats.profitMonth)}
-          icon={TrendingUp}
-        />
-        <StatCard
-          title="Outstanding Balance"
-          value={formatCurrency(stats.outstanding)}
-          icon={BarChart3}
-        />
-        <StatCard
-          title="Next Month Forecast"
-          value={formatCurrency(stats.forecastNextMonth)}
-          icon={TrendingUp}
-        />
-      </div>
-
+async function RevenueProfitSection() {
+  const revenueTrend = await getRevenueTrend(12);
+  return (
+    <>
       <Card>
         <CardHeader>
           <CardTitle>Revenue vs Profit (Last 12 Months)</CardTitle>
-          <p className="text-sm text-zinc-400">
-            Monthly comparison
-          </p>
+          <p className="text-sm text-zinc-400">Monthly comparison</p>
         </CardHeader>
         <CardContent>
           <RevenueVsProfitChart data={revenueTrend} />
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Daily Revenue</CardTitle>
-            <p className="text-sm text-zinc-400">Current month</p>
-          </CardHeader>
-          <CardContent>
-            <DailyRevenueChart
-              data={dailyRevenue.map((d) => ({ day: d.date, revenue: d.revenue }))}
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Methods</CardTitle>
-            <p className="text-sm text-zinc-400">Revenue by payment type</p>
-          </CardHeader>
-          <CardContent>
-            <PaymentMethodsChart
-              data={paymentMethods.map((p) => ({
-                name: p.method,
-                value: p.amount,
-              }))}
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Revenue by Part Category</CardTitle>
-          <p className="text-sm text-zinc-400">Retail revenue from repair orders</p>
-        </CardHeader>
-        <CardContent>
-          <RevenueByCategoryChart
-            data={revenueByCategory.map((c) => ({
-              name: c.category,
-              value: c.amount,
-            }))}
-          />
         </CardContent>
       </Card>
 
@@ -143,68 +104,178 @@ export default async function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
+    </>
+  );
+}
 
-      {branchCompare.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Branch comparison (this month)</CardTitle>
-            <p className="text-sm text-zinc-400">Company-wide view</p>
-          </CardHeader>
-          <CardContent>
-            {/* Mobile cards */}
-            <div className="space-y-3 md:hidden">
-              {branchCompare.map((b) => (
-                <div
-                  key={b.branchId}
-                  className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4"
-                >
-                  <p className="font-medium text-zinc-50">{b.branchName}</p>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-                    <div>
-                      <p className="text-[11px] text-zinc-500">Revenue</p>
-                      <p className="mt-0.5 font-medium tabular-nums text-emerald-500">
-                        {formatCurrency(b.revenue)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-zinc-500">Repairs</p>
-                      <p className="mt-0.5 tabular-nums text-zinc-200">{b.repairs}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-zinc-500">Customers</p>
-                      <p className="mt-0.5 tabular-nums text-zinc-200">{b.customers}</p>
-                    </div>
-                  </div>
+async function DailyAndMethodsSection() {
+  const [dailyRevenue, paymentMethods] = await Promise.all([
+    getDailyRevenue(),
+    getPaymentMethodsStats(),
+  ]);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Daily Revenue</CardTitle>
+          <p className="text-sm text-zinc-400">Current month</p>
+        </CardHeader>
+        <CardContent>
+          <DailyRevenueChart
+            data={dailyRevenue.map((d) => ({ day: d.date, revenue: d.revenue }))}
+          />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment Methods</CardTitle>
+          <p className="text-sm text-zinc-400">Revenue by payment type</p>
+        </CardHeader>
+        <CardContent>
+          <PaymentMethodsChart
+            data={paymentMethods.map((p) => ({
+              name: p.method,
+              value: p.amount,
+            }))}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+async function CategorySection() {
+  const revenueByCategory = await getRevenueByCategory();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Revenue by Part Category</CardTitle>
+        <p className="text-sm text-zinc-400">Retail revenue from repair orders</p>
+      </CardHeader>
+      <CardContent>
+        <RevenueByCategoryChart
+          data={revenueByCategory.map((c) => ({
+            name: c.category,
+            value: c.amount,
+          }))}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+async function BranchSection() {
+  const branchCompare = await getBranchComparison();
+  if (branchCompare.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Branch comparison (this month)</CardTitle>
+        <p className="text-sm text-zinc-400">Company-wide view</p>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3 md:hidden">
+          {branchCompare.map((b) => (
+            <div
+              key={b.branchId}
+              className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4"
+            >
+              <p className="font-medium text-zinc-50">{b.branchName}</p>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <p className="text-[11px] text-zinc-500">Revenue</p>
+                  <p className="mt-0.5 font-medium tabular-nums text-emerald-500">
+                    {formatCurrency(b.revenue)}
+                  </p>
                 </div>
+                <div>
+                  <p className="text-[11px] text-zinc-500">Repairs</p>
+                  <p className="mt-0.5 tabular-nums text-zinc-200">{b.repairs}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-zinc-500">Customers</p>
+                  <p className="mt-0.5 tabular-nums text-zinc-200">{b.customers}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden table-scroll md:block">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-800">
+                <th className="py-3 text-start">Branch</th>
+                <th className="py-3 text-end">Revenue</th>
+                <th className="py-3 text-end">Repairs</th>
+                <th className="py-3 text-end">Customers</th>
+              </tr>
+            </thead>
+            <tbody>
+              {branchCompare.map((b) => (
+                <tr key={b.branchId} className="border-b border-zinc-800/50">
+                  <td className="py-3">{b.branchName}</td>
+                  <td className="py-3 text-end tabular-nums text-emerald-500">
+                    {formatCurrency(b.revenue)}
+                  </td>
+                  <td className="py-3 text-end tabular-nums">{b.repairs}</td>
+                  <td className="py-3 text-end tabular-nums">{b.customers}</td>
+                </tr>
               ))}
-            </div>
-            <div className="hidden table-scroll md:block">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="py-3 text-start">Branch</th>
-                    <th className="py-3 text-end">Revenue</th>
-                    <th className="py-3 text-end">Repairs</th>
-                    <th className="py-3 text-end">Customers</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {branchCompare.map((b) => (
-                    <tr key={b.branchId} className="border-b border-zinc-800/50">
-                      <td className="py-3">{b.branchName}</td>
-                      <td className="py-3 text-end tabular-nums text-emerald-500">
-                        {formatCurrency(b.revenue)}
-                      </td>
-                      <td className="py-3 text-end tabular-nums">{b.repairs}</td>
-                      <td className="py-3 text-end tabular-nums">{b.customers}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default async function AnalyticsPage() {
+  await gatePage('analytics:read', FeatureModule.ANALYTICS);
+
+  return (
+    <div className="space-y-6 sm:space-y-8">
+      <PageHeader
+        title="Analytics"
+        description="Business intelligence and projections"
+      />
+
+      <Suspense fallback={<StatsSkeleton />}>
+        <AnalyticsStats />
+      </Suspense>
+
+      <Suspense
+        fallback={
+          <div className="space-y-6">
+            <ChartCardSkeleton className="h-[320px]" />
+            <ChartCardSkeleton className="h-48" />
+          </div>
+        }
+      >
+        <div className="space-y-6 sm:space-y-8">
+          <RevenueProfitSection />
+        </div>
+      </Suspense>
+
+      <Suspense
+        fallback={
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChartCardSkeleton />
+            <ChartCardSkeleton />
+          </div>
+        }
+      >
+        <DailyAndMethodsSection />
+      </Suspense>
+
+      <Suspense fallback={<ChartCardSkeleton />}>
+        <CategorySection />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <BranchSection />
+      </Suspense>
     </div>
   );
 }
